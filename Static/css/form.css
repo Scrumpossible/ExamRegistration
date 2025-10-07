@@ -1,0 +1,19 @@
+form {
+
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin: 10px auto;
+}
+.form-group input {
+    padding: 3px;
+}
+.button-class {
+    border: none;
+    color: white;
+    display: inline-block;
+    width: 15%;
+    padding: 2px;
+    Cursor: pointer;
+}

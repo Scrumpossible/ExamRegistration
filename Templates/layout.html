@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Registration</title>
+    <link rel= "stylesheet" href="{{url_for('static', filename = 'css/form.css')}}">
+    <link rel= "stylesheet" href="{{url_for('static', filename = 'css/styles.css')}}">
+</head>
+<body>
+    <header>
+    <div>
+    <h1>Welcome!</h1>
+    <ul>
+        <li>
+            <a href="/">Login</a>
+        </li>
+        <li>
+            <a href="/info">Info</a>
+        </li>
+        
+        
+    </ul>
+    </div>
+    </header>
+    <main>
+        {% block content %} {% endblock %} 
+    </main>
+    <footer>
+        <p> Copyright Scrumpossible</p>
+    </footer>
+</body>
+</html>
