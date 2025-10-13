@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Create Account</h2>
+
+<form method="POST">
+  <label>Role:</label><br>
+  <select name="role" id="roleSelect" onchange="toggleIDField()">
+    <option value="student">Student</option>
+    <option value="faculty">Faculty</option>
+  </select><br><br>
+
+  <label>Full Name:</label><br>
+  <input type="text" name="full_name" required><br>
+
+  <label>Email:</label><br>
+  <input type="email" name="email" required><br>
+
+
+  <div id="studentField">
+    <label>NSHE Number:</label><br>
+    <input type="password" name="nshe"><br>
+  </div>
+
+  <div id="facultyField" style="display:none;">
+    <label>Employee Number:</label><br>
+    <input type="password" name="employee"><br>
+  </div>
+
+  <br><button type="submit">Register</button>
+</form>
+
+<script>
+function toggleIDField() {
+  const role = document.getElementById('roleSelect').value;
+  document.getElementById('studentField').style.display = role === 'student' ? 'block' : 'none';
+  document.getElementById('facultyField').style.display = role === 'faculty' ? 'block' : 'none';
+}
+</script>
+
+</body>
+</html>
