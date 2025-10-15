@@ -58,12 +58,12 @@ def admin_dashboard():
     
     # New student registrations section
     cursor.execute("SELECT * FROM users WHERE role='student'")
-    students = cursor.fetchall()
-    
+    students = cursor.fetchall() or []  # Ensure we get an empty list if no students
+
     student_data = []
-    for student in students:
+    for student in students:  # This loop only runs if there are students
         cursor.execute("""
-            SELECT e.name AS exam_name, l.campus_name, l.room_number, u.full_name AS proctor_name
+            SELECT s.id AS session_id, e.name AS exam_name, l.campus_name, l.room_number, u.full_name AS proctor_name
             FROM registrations r
             JOIN exam_sessions s ON r.session_id = s.id
             JOIN exams e ON s.exam_id = e.id
@@ -71,10 +71,9 @@ def admin_dashboard():
             LEFT JOIN users u ON s.proctor_id = u.id
             WHERE r.user_id = %s
         """, (student['id'],))
-        exams_for_student = cursor.fetchall()
+        exams_for_student = cursor.fetchall() or []  # Ensure list even if no registrations
         student_data.append({'student': student, 'exams': exams_for_student})
     
-    # Updated render_template call
     return render_template(
         'AdminDashboard.html',
         exams=exams,
@@ -82,7 +81,6 @@ def admin_dashboard():
         proctors=proctors,
         student_data=student_data
     )
-
 
 @app.route('/admin/add_exam', methods=['POST'])
 def add_exam():
@@ -130,6 +128,19 @@ def assign_proctor():
     # If your schema requires, insert into exam_proctors table instead
     cursor.execute("UPDATE exam_sessions SET proctor_id=%s WHERE location_id=%s", (proctor_id, location_id))
     db.commit()
+    return redirect('/admin/dashboard')
+
+@app.route('/admin/remove_registration', methods=['POST'])
+def remove_registration():
+    if not session.get('admin_logged_in'):
+        return redirect('/admin')
+    
+    user_id = request.form['user_id']
+    session_id = request.form['exam_session_id']
+    
+    cursor.execute("DELETE FROM registrations WHERE user_id=%s AND session_id=%s", (user_id, session_id))
+    db.commit()
+    
     return redirect('/admin/dashboard')
 
 # Get all students
