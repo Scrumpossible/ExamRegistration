@@ -1,19 +1,33 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel= "stylesheet" href="{{url_for('static', filename = 'css/form.css')}}">
     <title>Admin Login</title>
 </head>
 <body>
-    <h2>Admin Login</h2>
-    {% if error %}
+    <div class="main">
+        <h1>CSN Login</h1>
+        {% if error %}
         <p style="color:red;">{{ error }}</p>
-    {% endif %}
-    <form method="POST" action="/admin">
-        <label>Email:</label><br>
-        <input type="text" name="email"><br>
-        <label>Password:</label><br>
-        <input type="password" name="password"><br><br>
-        <input type="submit" value="Login">
+        {% endif %}
+        <form method= "POST" action="/admin/dashboard">
+            <label for="Email">Email</label>
+            <input type="text" id="Email" placeholder="Email" >
+
+            <label for="username">Password</label>
+            <input type="text" id="password" placeholder="Password" >
+
+            <div class="wrap">
+                <button type="submit">Log In</button>
+        </div>
     </form>
+    <p>New User?
+        <a href="#" style="text-decoration: none;">
+            Create your account
+        </a>
+    </p>
+    </div>   
 </body>
 </html>
