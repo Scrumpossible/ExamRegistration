@@ -16,16 +16,10 @@ cursor = db.cursor(dictionary=True)
 @app.route('/')
 def home():
     return render_template('Login.html')
-        
 
-@app.route('/info')
-def info():
-    return render_template('Info.html')
-
-
-@app.route('/faculty')
-def faculty():
-    return render_template('Faculty.html')
+@app.route('/faculty_home')
+def faculty_home():
+    return render_template('faculty_home.html')
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_login():
@@ -170,3 +164,4 @@ def admin_logout():
 if __name__ == '__main__':
     app.run(host='localhost', port = 5000, debug = True)
     print('The flask server is running')
+
