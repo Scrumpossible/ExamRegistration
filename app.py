@@ -25,6 +25,10 @@ def home():
 def faculty_home():
     return render_template('faculty_home.html')
 
+@app.route('/register')
+def register():
+    return render_template('register.html')
+
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
@@ -228,3 +232,4 @@ def login():
 
 if __name__ == '__main__':
     app.run(host='localhost', port=5000, debug=True, use_reloader=False)
+
