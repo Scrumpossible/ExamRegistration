@@ -25,8 +25,24 @@ def home():
 def faculty_home():
     return render_template('faculty_home.html')
 
-@app.route('/register')
+@app.route('/register', methods= ['GET', 'POST'])
 def register():
+    if request.method == 'POST':
+        name = request.form['full_name']
+        email = request.form['email']
+        nshe = request.form['nhse_number']
+        password = request.form['password']
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+                "INSERT INTO users (full_name, email, nhse_number, password)" \
+                "VALUES (%s, %s, %s, %s)" 
+                (name, email, nshe, password))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
     return render_template('register.html')
 
 @app.route('/admin', methods=['GET', 'POST'])
@@ -232,4 +248,5 @@ def login():
 
 if __name__ == '__main__':
     app.run(host='localhost', port=5000, debug=True, use_reloader=False)
+
 
