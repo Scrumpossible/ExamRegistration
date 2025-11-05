@@ -1,21 +1,18 @@
-from flask import Flask, render_template, request, redirect, session
-import mysql.connector
+from flask import Flask, render_template, request, redirect, session, url_for, flash
+import mysql. connector
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # required for sessions
-
-# --- Safe DB connection function to prevent segfaults ---
 
 def get_db_connection():
     import mysql.connector
     return mysql.connector.connect(
         host="localhost",
         user="root",
-        password="root",
+        password="Maron1217",
         database="exam_registration",
-        use_pure=True  # avoids segfaults
+        use_pure=True 
     )
-# --- ROUTES ---
+
 
 @app.route('/')
 def home():
@@ -28,22 +25,46 @@ def faculty_home():
 @app.route('/register', methods= ['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        name = request.form['full_name']
+        name = request.form['name']
         email = request.form['email']
-        nshe = request.form['nhse_number']
+        nhse_number = request.form['nhse_number']
         password = request.form['password']
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-                "INSERT INTO users (full_name, email, nhse_number, password)" \
-                "VALUES (%s, %s, %s, %s)" 
-                (name, email, nshe, password))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            # Check if email already exists
+            cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+            existing_user = cursor.fetchone()
+
+            if existing_user:
+                message = "Email already registered!"
+            else:
+                # Insert new user
+                cursor.execute(
+                    "INSERT INTO users (name, email, nhse_number, password) VALUES (%s, %s, %s, %s)",
+                    (name, email, nhse_number, password)
+                )
+                conn.commit()
+
+                # ✅ Flash message and redirect to success page
+                flash("Registration successful!")
+                return redirect(url_for('/success'))
+
+        except mysql.connector.Error as err:
+            message = f"Database error: {err}"
+
+        finally:
+            if conn.is_connected():
+                cursor.close()
+                conn.close()
+
     return render_template('register.html')
+
+@app.route('/success')
+def success():
+    return render_template('register_success.html')
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_login():
@@ -247,6 +268,4 @@ def login():
     return render_template('login.html', error=error)
 
 if __name__ == '__main__':
-    app.run(host='localhost', port=5000, debug=True, use_reloader=False)
-
-
+    app.run(host='localhost', port = 5000, debug = True)
