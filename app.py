@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, session, url_for, flash
-import mysql. connector
+import mysql.connector
 
 app = Flask(__name__)
 app.secret_key= 'your_secret_key'
@@ -270,5 +270,6 @@ def login():
 
 if __name__ == '__main__':
     app.run(host='localhost', port = 5000, debug = True)
+
 
 
