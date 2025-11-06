@@ -5,7 +5,8 @@ CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     email VARCHAR(255) UNIQUE NOT NULL,
     nshe_num VARCHAR(10) UNIQUE NOT NULL,
-    full_name VARCHAR(255) NOT NULL,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
     role ENUM('student', 'faculty', 'admin') NOT NULL,
     password VARCHAR(255) NOT NULL
 );
@@ -58,3 +59,4 @@ CREATE TABLE registrations (
     UNIQUE (user_id, exam_id, session_id)
     -- Optional: CHECK constraint to limit to 3 exams per student would go here (not directly enforceable in MySQL without trigger)
 );
+
