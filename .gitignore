@@ -1,0 +1,54 @@
+# ================================
+# Python + Flask + MySQL project
+# ================================
+
+# --- Virtual environment ---
+venv/
+.env/
+env/
+
+# --- Python cache / compiled files ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Flask specific ---
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Environment variables ---
+# (if you later store DB credentials or secret keys in a .env file)
+.env
+
+# --- Log files ---
+*.log
+
+# --- Unit test / coverage results ---
+.coverage
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+.pytest_cache/
+
+# --- IDE / Editor specific ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# --- macOS & Windows system files ---
+.DS_Store
+Thumbs.db
+
+# --- Backup / temporary files ---
+*.bak
+*.tmp
+~$*
+
+# --- MySQL dumps (optional to ignore) ---
+*.sql
+!exam_registration.sql   # exception: keep your main schema file
