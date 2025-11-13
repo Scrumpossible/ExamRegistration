@@ -219,7 +219,7 @@
                         {% for exam in entry.exams %}
                         <li>
                             {{ exam.exam_name }} - {{ exam.campus_name }} - {{ exam.room_number }} - {{ exam.proctor_name or 'No Proctor' }}
-                            <form method="POST" action="/admin_remove_registration" class="inline">
+                            <form method="POST" action="/admin/remove_registration" class="inline">
                                 <input type="hidden" name="user_id" value="{{ entry.student.id }}">
                                 <input type="hidden" name="exam_session_id" value="{{ exam.session_id }}">
                                 <input type="submit" value="Remove">
