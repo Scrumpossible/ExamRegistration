@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exam Registration</title>
-    <link rel= "stylesheet" href="{{url_for('static', filename = 'css/form.css')}}">
-    <link rel= "stylesheet" href="{{url_for('static', filename = 'css/styles.css')}}">
+    
+    <title>{% block title %}Exam Registration{% endblock %}</title>
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/form.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
+
 <body>
     <header>
     <div>

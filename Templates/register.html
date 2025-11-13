@@ -10,7 +10,7 @@
         <h2>Create Account</h2>
 
         <div class="form-box">
-            <form action ="/register" method="POST">
+            <form action="/register" method="POST">
                 <label>Role:</label><br>
                 <select name="role" id="roleSelect" onchange="toggleIDField()">
                     <option value="student">Student</option>
@@ -18,23 +18,22 @@
                 </select><br><br>
 
                 <label>Full Name:</label><br>
-                <input type="text" name="full_name" required><br>
+                <input type="text" name="name" required><br>
 
                 <label>Email:</label><br>
                 <input type="email" name="email" required><br>
 
-
                 <div id="studentField">
-                <label>NSHE Number:</label><br>
-                <input type="password" name="nshe"><br>
+                    <label>NSHE Number:</label><br>
+                    <input type="text" name="nhse_number"><br>
                 </div>
 
                 <div id="facultyField" style="display:none;">
-                <label>Employee Number:</label><br>
-                <input type="password" name="employee"><br>
+                    <label>Employee Number:</label><br>
+                    <input type="text" name="employee_number"><br> <!-- optional, backend must handle -->
                 </div>
 
-                <label>Password</label><br>
+                <label>Password:</label><br>
                 <input type="password" name="password" required><br>
 
                 <br><button type="submit">Register</button>

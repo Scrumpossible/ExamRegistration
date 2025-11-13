@@ -23,72 +23,62 @@ def home():
 def faculty_home():
     return render_template('faculty_home.html')
 
-@app.route('/register', methods= ['GET', 'POST'])
+@app.route('/register', methods=['GET', 'POST'])
 def register():
+    error = None
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
-        nhse_number = request.form['nhse_number']
         password = request.form['password']
+        role = request.form['role']
+
+        # Determine nshe_num based on role
+        if role == 'student':
+            nshe_number = request.form.get('nhse_number', '')
+        else:  # faculty
+            nshe_number = request.form.get('employee_number', '')
 
         try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
+            db = get_db_connection()
+            cursor = db.cursor()
 
             # Check if email already exists
             cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
             existing_user = cursor.fetchone()
 
             if existing_user:
-                message = "Email already registered!"
+                error = "Email already registered!"
             else:
                 # Insert new user
                 cursor.execute(
-                    "INSERT INTO users (name, email, nhse_number, password) VALUES (%s, %s, %s, %s)",
-                    (name, email, nhse_number, password)
+                    "INSERT INTO users (full_name, email, nshe_num, role, password) VALUES (%s, %s, %s, %s, %s)",
+                    (name, email, nshe_number, role, password)
                 )
-                conn.commit()
+                db.commit()
 
-                # ✅ Flash message and redirect to success page
-                flash("Registration successful!")
-                return redirect(url_for('/success'))
+                return redirect('/login')  # <-- redirect to login after success
 
-        except mysql.connector.Error as err:
-            message = f"Database error: {err}"
+        except Exception as e:
+            error = f"Database error: {e}"
 
         finally:
-            if conn.is_connected():
-                cursor.close()
-                conn.close()
+            cursor.close()
+            db.close()
 
-    return render_template('register.html')
+    return render_template('register.html', error=error)
 
 @app.route('/success')
 def success():
     return render_template('register_success.html')
 
-@app.route('/admin', methods=['GET', 'POST'])
-def admin_login():
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        db = get_db_connection()
-        cursor = db.cursor(dictionary=True)
-        cursor.execute(
-            "SELECT * FROM users WHERE email=%s AND password=%s AND role='admin'",
-            (email, password)
-        )
-        admin_user = cursor.fetchone()
-        cursor.close()
-        db.close()
-        if admin_user:
-            session['admin_logged_in'] = True
-            return redirect('/admin/dashboard')
-        else:
-            return render_template('AdminLogin.html', error="Invalid credentials")
-    return render_template('AdminLogin.html')
+@app.route('/student_home')
+def student_home():
+    # Optionally, check if user is logged in
+    if session.get('role') != 'student':
+        return redirect('/login')
+    return render_template('student_home.html')
 
-@app.route('/admin/dashboard')
+@app.route('/admin_home')
 def admin_dashboard():
     if not session.get('admin_logged_in'):
         return redirect('/admin')
@@ -128,7 +118,7 @@ def admin_dashboard():
     db.close()
 
     return render_template(
-        'AdminDashboard.html',
+        'admin_home.html',
         exams=exams,
         locations=locations,
         proctors=proctors,
@@ -150,7 +140,7 @@ def add_exam():
     cursor.close()
     db.close()
 
-    return redirect('/admin/dashboard')
+    return redirect('/admin_home')
 
 @app.route('/admin/delete_exam/<int:exam_id>')
 def delete_exam(exam_id):
@@ -164,7 +154,7 @@ def delete_exam(exam_id):
     cursor.close()
     db.close()
 
-    return redirect('/admin/dashboard')
+    return redirect('/admin_home')
 
 @app.route('/admin/add_location', methods=['POST'])
 def add_location():
@@ -181,7 +171,7 @@ def add_location():
     cursor.close()
     db.close()
 
-    return redirect('/admin/dashboard')
+    return redirect('/admin_home')
 
 @app.route('/admin/delete_location/<int:location_id>')
 def delete_location(location_id):
@@ -195,7 +185,7 @@ def delete_location(location_id):
     cursor.close()
     db.close()
 
-    return redirect('/admin/dashboard')
+    return redirect('/admin_home')
 
 @app.route('/admin/assign_proctor', methods=['POST'])
 def assign_proctor():
@@ -212,7 +202,7 @@ def assign_proctor():
     cursor.close()
     db.close()
 
-    return redirect('/admin/dashboard')
+    return redirect('/admin_home')
 
 @app.route('/admin/remove_registration', methods=['POST'])
 def remove_registration():
@@ -229,12 +219,12 @@ def remove_registration():
     cursor.close()
     db.close()
 
-    return redirect('/admin/dashboard')
+    return redirect('/admin_home')
 
-@app.route('/admin/logout')
-def admin_logout():
-    session.pop('admin_logged_in', None)
-    return redirect('/admin')
+@app.route('/logout')
+def logout():
+    session.clear()  # clears all session data
+    return redirect('/login')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -243,7 +233,6 @@ def login():
         email = request.form['email']
         password = request.form['password']
 
-        # create a fresh connection and cursor
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
 
@@ -258,15 +247,21 @@ def login():
         if user:
             session['user_id'] = user['id']
             session['role'] = user['role']
-            if user['role'] == 'faculty':
-                return redirect('/faculty')
-            elif user['role'] == 'student':
-                return redirect('/student')
-            else:
-                return redirect('/')
+
+            # Route based on role
+            if user['role'] == 'student':
+                return redirect('/student_home')
+            elif user['role'] == 'faculty':
+                return redirect('/faculty_home')
+            elif user['role'] == 'admin':
+                session['admin_logged_in'] = True
+                return redirect('/admin_home')
+
         else:
             error = "Invalid credentials"
+
     return render_template('login.html', error=error)
+
 
 if __name__ == '__main__':
     app.run(host='localhost', port = 5000, debug = True)
