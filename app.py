@@ -22,7 +22,57 @@ def home():
 def faculty_home():
     if 'user_id' not in session or session.get('role') != 'faculty':
         return redirect('/login')
-    return render_template('faculty_home.html')
+
+    faculty_name = session.get('name', 'Faculty')
+    today = date.today()
+
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT s.session_date, s.session_time, e.name AS exam_name,
+               l.campus_name, l.room_number, u.full_name AS student_name
+        FROM exam_sessions s
+        JOIN registrations r ON r.session_id = s.id
+        JOIN users u ON r.user_id = u.id
+        JOIN exams e ON s.exam_id = e.id
+        JOIN locations l ON s.location_id = l.id
+        WHERE s.session_date >= %s
+        ORDER BY s.session_date, s.session_time, u.full_name
+    """, (today,))
+
+    results = cursor.fetchall()
+    cursor.close()
+    db.close()
+
+    # --- Build schedule dictionary safely ---
+    schedule = {}
+    for row in results:
+        session_date = row['session_date']
+        session_time = row['session_time']
+
+        # Handle MySQL TIME fields that may come as timedelta
+        if isinstance(session_time, timedelta):
+            session_time = (datetime.min + session_time).time()
+
+        if session_date is None or session_time is None:
+            continue  # Skip incomplete rows
+
+        date_str = session_date.strftime("%Y-%m-%d")
+        time_str = session_time.strftime("%I:%M %p")
+
+        # Initialize day structure if missing
+        if date_str not in schedule:
+            schedule[date_str] = {f"{hour:02d}:00 AM" if hour < 12 else f"{hour-12:02d}:00 PM": []
+                                  for hour in range(8, 17)}
+
+        # Append student info to correct time slot
+        if time_str not in schedule[date_str]:
+            schedule[date_str][time_str] = []
+
+        schedule[date_str][time_str].append(row)
+
+    return render_template('faculty_home.html', name=faculty_name, schedule=schedule)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -146,8 +196,6 @@ def remove_registration():
     return redirect('/student_home')
 
 # ---------- Exam Registration Page ----------
-from datetime import date, datetime, time, timedelta
-
 @app.route('/exam_register', methods=['GET', 'POST'])
 def exam_register():
     if 'user_id' not in session or session.get('role') != 'student':
@@ -167,6 +215,7 @@ def exam_register():
         if count >= 3:
             cursor.close()
             db.close()
+            flash("You have already registered for 3 exams.")
             return redirect('/student_home')
 
         # Check if session is full
@@ -175,6 +224,7 @@ def exam_register():
         if reg_count >= 20:
             cursor.close()
             db.close()
+            flash("That session is full.")
             return redirect('/exam_register')
 
         # Insert registration
@@ -182,6 +232,7 @@ def exam_register():
         db.commit()
         cursor.close()
         db.close()
+        flash("Exam registered successfully!")
         return redirect('/student_home')
 
     # --- GET: show registration form ---
@@ -191,7 +242,6 @@ def exam_register():
     cursor.execute("SELECT * FROM locations")
     locations = cursor.fetchall()
 
-    # Get upcoming sessions
     today = date.today()
     now = datetime.now().time()
 
@@ -208,30 +258,34 @@ def exam_register():
     """, (today,))
     sessions = cursor.fetchall()
 
-    # Filter out full or past timeslots and convert date/time to strings
     available_sessions = []
     for s in sessions:
-        session_time = s['session_time']
-        if isinstance(session_time, timedelta):
-            session_time = (datetime.min + session_time).time()
-        # Skip past times today
+        # Convert string date/time to Python types if necessary
+        if isinstance(s['session_date'], str):
+            s['session_date'] = datetime.strptime(s['session_date'], "%Y-%m-%d").date()
+        if isinstance(s['session_time'], timedelta):
+            s['session_time'] = (datetime.min + s['session_time']).time()
+        elif isinstance(s['session_time'], str):
+            s['session_time'] = datetime.strptime(s['session_time'], "%H:%M:%S").time()
+
+        # Skip full sessions or past times today
         if s['reg_count'] >= 20:
             continue
-        if s['session_date'] == today and session_time <= now:
+        if s['session_date'] == today and s['session_time'] <= now:
             continue
 
-        # Convert for JSON usage in template
         s['session_date'] = s['session_date'].strftime("%Y-%m-%d")
-        s['session_time'] = session_time.strftime("%H:%M")
+        s['session_time'] = s['session_time'].strftime("%I:%M %p").lstrip('0')
         available_sessions.append(s)
 
     cursor.close()
     db.close()
 
-    return render_template('student_exam_register.html',
-                           exams=exams,
-                           locations=locations,
-                           sessions=available_sessions)
+    return render_template(
+        'student_exam_register.html',
+        exams=exams,
+        locations=locations,
+        sessions=available_sessions)
 
 # ---------- Admin Home ----------
 @app.route('/admin_home')

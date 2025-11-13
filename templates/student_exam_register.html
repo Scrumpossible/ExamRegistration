@@ -1,68 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register for an Exam – Exam Registration</title>
-    <!--<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">-->
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h2 { text-align: center; margin-bottom: 30px; }
-        form { max-width: 600px; margin: 0 auto; }
-        label { display: block; margin-top: 15px; font-weight: bold; }
-        select, input[type="date"], input[type="time"], input[type="submit"], button {
-            width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;
-            border-radius: 5px; border: 1px solid #ccc;
-        }
-        input[type="submit"], button {
-            background-color: #007bff; color: white; font-weight: bold; cursor: pointer;
-            margin-top: 20px;
-        }
-        input[type="submit"]:hover, button:hover { background-color: #0056b3; }
-        input:disabled { background-color: #ccc; cursor: not-allowed; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register for an Exam</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f9f9f9; }
+    h2 { text-align: center; margin-bottom: 30px; }
+    form { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.1); }
+    label { display: block; margin-top: 15px; font-weight: bold; }
+    select, input[type="date"], input[type="submit"], button {
+        width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;
+        border-radius: 5px; border: 1px solid #ccc;
+    }
+    input[type="submit"], button {
+        background-color: #007bff; color: white; font-weight: bold; cursor: pointer;
+        margin-top: 20px;
+    }
+    input[type="submit"]:hover, button:hover { background-color: #0056b3; }
+    input:disabled, select:disabled { background-color: #eee; cursor: not-allowed; }
+</style>
 </head>
 <body>
-    <h2>Register for an Exam</h2>
 
-    <form method="POST" action="/exam_register" id="examRegisterForm">
-        <!-- Select Exam -->
-        <label for="examSelect">Exam:</label>
-        <select id="examSelect" required>
-            <option value="">-- Select Exam --</option>
-            {% for exam in exams %}
-            <option value="{{ exam.id }}">{{ exam.name }}</option>
-            {% endfor %}
-        </select>
+<h2>Register for an Exam</h2>
 
-        <!-- Select Location -->
-        <label for="locationSelect">Location:</label>
-        <select id="locationSelect" required disabled>
-            <option value="">-- Select Location --</option>
-        </select>
+<form method="POST" action="/exam_register" id="examRegisterForm">
+    <label for="examSelect">Exam:</label>
+    <select id="examSelect" name="exam_id" required>
+        <option value="">-- Select Exam --</option>
+        {% for exam in exams %}
+        <option value="{{ exam.id }}">{{ exam.name }}</option>
+        {% endfor %}
+    </select>
 
-        <!-- Select Date -->
-        <label for="dateSelect">Date:</label>
-        <input type="date" id="dateSelect" required disabled>
+    <label for="locationSelect">Location:</label>
+    <select id="locationSelect" required disabled>
+        <option value="">-- Select Location --</option>
+    </select>
 
-        <!-- Select Time -->
-        <label for="timeSelect">Time:</label>
-        <select id="timeSelect" required disabled>
-            <option value="">-- Select Time --</option>
-        </select>
+    <label for="dateSelect">Date:</label>
+    <input type="date" id="dateSelect" required disabled>
 
-        <!-- Hidden session_id for POST -->
-        <input type="hidden" name="session_id" id="sessionIdInput">
+    <label for="timeSelect">Time:</label>
+    <select id="timeSelect" required disabled>
+        <option value="">-- Select Time --</option>
+    </select>
 
-        <!-- Submit / Cancel -->
-        <input type="submit" value="Register" id="registerButton" disabled>
-        <button type="button" onclick="window.location.href='/student_home'">Cancel</button>
-    </form>
+    <input type="hidden" name="session_id" id="sessionIdInput">
+    <input type="submit" value="Register" id="registerButton" disabled>
+    <button type="button" onclick="window.location.href='/student_home'">Cancel</button>
+</form>
 
 <script>
-    // --- Prepare session data from Flask ---
-    const sessions = {{ sessions|tojson }};
-
+    const sessions = {{ sessions | tojson }};
     const examSelect = document.getElementById('examSelect');
     const locationSelect = document.getElementById('locationSelect');
     const dateSelect = document.getElementById('dateSelect');
@@ -72,7 +63,6 @@
 
     let filteredSessions = [];
 
-    // Populate locations based on selected exam
     examSelect.addEventListener('change', () => {
         const examId = examSelect.value;
         locationSelect.innerHTML = '<option value="">-- Select Location --</option>';
@@ -92,14 +82,12 @@
 
         locationIds.forEach(locId => {
             const loc = filteredSessions.find(s => s.location_id == locId);
-            const optionText = `${loc.campus_name} - Room ${loc.room_number}`;
-            locationSelect.innerHTML += `<option value="${loc.location_id}">${optionText}</option>`;
+            locationSelect.innerHTML += `<option value="${loc.location_id}">${loc.campus_name} - Room ${loc.room_number}</option>`;
         });
 
         locationSelect.disabled = false;
     });
 
-    // Populate available dates based on selected location
     locationSelect.addEventListener('change', () => {
         const locId = locationSelect.value;
         dateSelect.value = '';
@@ -114,17 +102,11 @@
             .filter(s => s.location_id == locId)
             .map(s => s.session_date))];
 
-        // set min date as today
         dateSelect.min = new Date().toISOString().split('T')[0];
-
-        // Enable date selection
         dateSelect.disabled = false;
-
-        // Store available dates for current location
         dateSelect.dataset.availableDates = JSON.stringify(dates);
     });
 
-    // Populate times based on selected date and location
     dateSelect.addEventListener('change', () => {
         const locId = locationSelect.value;
         const selectedDate = dateSelect.value;
@@ -145,7 +127,6 @@
         if (availableTimes.length > 0) timeSelect.disabled = false;
     });
 
-    // Enable register button when a timeslot is selected
     timeSelect.addEventListener('change', () => {
         sessionIdInput.value = timeSelect.value;
         registerButton.disabled = !timeSelect.value;
