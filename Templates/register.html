@@ -3,50 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel= "stylesheet" href="{{url_for('static', filename = 'register.css')}}">
+    <title>Create Account – Exam Registration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f9f9f9;
+        }
+
+        header {
+            width: 100%;
+            background-color: #004080;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+        }
+
+        section {
+            width: 90%;
+            max-width: 500px;
+            background-color: white;
+            padding: 30px;
+            margin: 30px 0;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input[type="text"], input[type="email"], input[type="password"], select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0 15px 0;
+            box-sizing: border-box;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            background-color: #004080;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #0066cc;
+        }
+
+        p.error {
+            color: red;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
-    <div class="page-wrapper">
-        <h2>Create Account</h2>
 
-        <div class="form-box">
-            <form action="/register" method="POST">
-                <label>Role:</label><br>
-                <select name="role" id="roleSelect" onchange="toggleIDField()">
-                    <option value="student">Student</option>
-                    <option value="faculty">Faculty</option>
-                </select><br><br>
+<header>
+    <h1>Exam Registration</h1>
+</header>
 
-                <label>Full Name:</label><br>
-                <input type="text" name="name" required><br>
+<section>
+    <h2>Create Account</h2>
 
-                <label>Email:</label><br>
-                <input type="email" name="email" required><br>
+    {% if error %}
+    <p class="error">{{ error }}</p>
+    {% endif %}
 
-                <div id="studentField">
-                    <label>NSHE Number:</label><br>
-                    <input type="text" name="nhse_number"><br>
-                </div>
+    <form action="/register" method="POST">
+        <label>Role:</label>
+        <select name="role" id="roleSelect" onchange="toggleIDField()">
+            <option value="student">Student</option>
+            <option value="faculty">Faculty</option>
+        </select>
 
-                <div id="facultyField" style="display:none;">
-                    <label>Employee Number:</label><br>
-                    <input type="text" name="employee_number"><br> <!-- optional, backend must handle -->
-                </div>
+        <label>Full Name:</label>
+        <input type="text" name="name" required>
 
-                <label>Password:</label><br>
-                <input type="password" name="password" required><br>
+        <label>Email:</label>
+        <input type="email" name="email" required>
 
-                <br><button type="submit">Register</button>
-            </form>
+        <div id="studentField">
+            <label>NSHE Number:</label>
+            <input type="text" name="nhse_number">
         </div>
-    </div>
+
+        <div id="facultyField" style="display:none;">
+            <label>Employee Number:</label>
+            <input type="text" name="employee_number">
+        </div>
+
+        <label>Password:</label>
+        <input type="password" name="password" required>
+
+        <button type="submit">Register</button>
+    </form>
+
+    <p style="text-align:center; margin-top:15px;">
+        <a href="/login">Already have an account? Login here</a>
+    </p>
+</section>
 
 <script>
 function toggleIDField() {
-  const role = document.getElementById('roleSelect').value;
-  document.getElementById('studentField').style.display = role === 'student' ? 'block' : 'none';
-  document.getElementById('facultyField').style.display = role === 'faculty' ? 'block' : 'none';
+    const role = document.getElementById('roleSelect').value;
+    document.getElementById('studentField').style.display = role === 'student' ? 'block' : 'none';
+    document.getElementById('facultyField').style.display = role === 'faculty' ? 'block' : 'none';
 }
 </script>
+
 </body>
 </html>

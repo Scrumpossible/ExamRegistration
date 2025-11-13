@@ -1,12 +1,13 @@
 """
 setup_db.py
-Initializes the MySQL database for the Flask Exam Registration app.
+Initializes the MySQL database for the Flask Exam Registration app, including exam sessions.
 
 Run this ONCE before running app.py on a new computer:
     python setup_db.py
 """
 
 import mysql.connector
+from datetime import date, timedelta, time
 
 # Database connection settings — adjust if needed
 DB_NAME = "exam_registration"
@@ -60,6 +61,8 @@ CREATE TABLE IF NOT EXISTS exam_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     exam_id INT,
     location_id INT,
+    session_date DATE,
+    session_time TIME,
     proctor_id INT NULL,
     FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE,
     FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE,
@@ -93,8 +96,34 @@ if admin_exists == 0:
 else:
     print("Admin user already exists.")
 
+# --- Populate exam sessions for all exams and locations ---
+cursor.execute("SELECT id FROM exams")
+exams = cursor.fetchall()
+cursor.execute("SELECT id FROM locations")
+locations = cursor.fetchall()
+
+# Configurable date range for exam sessions
+start_date = date.today()
+end_date = start_date + timedelta(days=14)  # 2 weeks of sessions
+
+time_slots = [time(hour=h) for h in range(8, 17)]  # 8:00 - 16:00 (inclusive)
+
+for exam in exams:
+    exam_id = exam[0]
+    for loc in locations:
+        loc_id = loc[0]
+        current_date = start_date
+        while current_date <= end_date:
+            for t in time_slots:
+                cursor.execute("""
+                    INSERT INTO exam_sessions (exam_id, location_id, session_date, session_time)
+                    VALUES (%s, %s, %s, %s)
+                """, (exam_id, loc_id, current_date, t))
+            current_date += timedelta(days=1)
+
 conn.commit()
 cursor.close()
 conn.close()
 
-print("\nDatabase setup complete. You can now run `python app.py`.")
+print("\nDatabase setup complete. Exam sessions created for all exams and locations.")
+print("You can now run `python app.py`.")

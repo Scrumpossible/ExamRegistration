@@ -1,153 +1,240 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>{% block title %}Admin Dashboard – Exam Registration{% endblock %}</title>
-
-    <!-- Optional external CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-
     <style>
-        table { border-collapse: collapse; width: 90%; margin-bottom: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        input[type="submit"]:disabled { background-color: #ccc; cursor: not-allowed; }
-        section { margin-bottom: 40px; }
-        ul { list-style-type: none; padding-left: 0; }
-        li { margin-bottom: 5px; }
-        form.inline { display: inline; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f9f9f9;
+        }
+
+        h1, h2, h3 {
+            text-align: center;
+        }
+
+        header {
+            width: 100%;
+            background-color: #004080;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        header a.logout {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        section {
+            width: 90%;
+            max-width: 1000px;
+            background-color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin-bottom: 20px; 
+        }
+
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 8px; 
+            text-align: left; 
+        }
+
+        th { 
+            background-color: #f2f2f2; 
+        }
+
+        input[type="submit"]:disabled { 
+            background-color: #ccc; 
+            cursor: not-allowed; 
+        }
+
+        ul { 
+            list-style-type: none; 
+            padding-left: 0; 
+        }
+
+        li { 
+            margin-bottom: 5px; 
+        }
+
+        form.inline { 
+            display: inline; 
+        }
+
+        input[type="text"], select {
+            padding: 6px;
+            margin-right: 10px;
+        }
+
+        input[type="submit"] {
+            padding: 6px 12px;
+            cursor: pointer;
+            background-color: #004080;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        input[type="submit"]:hover:not(:disabled) {
+            background-color: #0066cc;
+        }
+
     </style>
 </head>
 <body>
-    <h2>Admin Dashboard</h2>
-    <p><a href="{{ url_for('logout') }}">Logout</a></p>
 
-    <!-- Exams Section -->
-    <section>
-        <h3>Exams</h3>
-        <table>
-            <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Action</th>
-            </tr>
-            {% for exam in exams %}
-            <tr>
-                <td>{{ exam.name }}</td>
-                <td>{{ exam.descriptions }}</td>
-                <td><a href="/admin/delete_exam/{{ exam.id }}">Delete</a></td>
-            </tr>
-            {% endfor %}
-        </table>
+<header>
+    <h1>Admin Dashboard</h1>
+    <a href="{{ url_for('logout') }}" class="logout">Logout</a>
+</header>
 
-        <form method="POST" action="/admin/add_exam">
-            <input type="text" name="name" placeholder="Exam Name" required>
-            <input type="text" name="description" placeholder="Description">
-            <input type="submit" value="Add Exam">
-        </form>
-    </section>
+<!-- Exams Section -->
+<section>
+    <h3>Exams</h3>
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Action</th>
+        </tr>
+        {% for exam in exams %}
+        <tr>
+            <td>{{ exam.name }}</td>
+            <td>{{ exam.descriptions }}</td>
+            <td><a href="/admin/delete_exam/{{ exam.id }}">Delete</a></td>
+        </tr>
+        {% endfor %}
+    </table>
 
-    <!-- Locations Section -->
-    <section>
-        <h3>Locations</h3>
-        <table>
-            <tr>
-                <th>Campus</th>
-                <th>Room</th>
-                <th>Action</th>
-            </tr>
+    <form method="POST" action="/admin/add_exam">
+        <input type="text" name="name" placeholder="Exam Name" required>
+        <input type="text" name="description" placeholder="Description">
+        <input type="submit" value="Add Exam">
+    </form>
+</section>
+
+<!-- Locations Section -->
+<section>
+    <h3>Locations</h3>
+    <table>
+        <tr>
+            <th>Campus</th>
+            <th>Room</th>
+            <th>Action</th>
+        </tr>
+        {% for loc in locations %}
+        <tr>
+            <td>{{ loc.campus_name }}</td>
+            <td>{{ loc.room_number }}</td>
+            <td><a href="/admin/delete_location/{{ loc.id }}">Delete</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <form method="POST" action="/admin/add_location">
+        <select name="campus_name" required>
+            <option value="">-- Select Campus --</option>
+            <option value="Henderson">Henderson</option>
+            <option value="North Las Vegas">North Las Vegas</option>
+            <option value="West Charleston">West Charleston</option>
+        </select>
+        <input type="text" name="room_number" placeholder="Room Number" required>
+        <input type="submit" value="Add Location">
+    </form>
+</section>
+
+<!-- Assign Proctors Section -->
+<section>
+    <h3>Assign Proctors</h3>
+    <form method="POST" action="/admin/assign_proctor">
+        <select name="location_id" id="locationSelect" required>
+            <option value="">-- Select Location --</option>
             {% for loc in locations %}
-            <tr>
-                <td>{{ loc.campus_name }}</td>
-                <td>{{ loc.room_number }}</td>
-                <td><a href="/admin/delete_location/{{ loc.id }}">Delete</a></td>
-            </tr>
+            <option value="{{ loc.id }}">{{ loc.campus_name }} - {{ loc.room_number }}</option>
             {% endfor %}
-        </table>
+        </select>
 
-        <form method="POST" action="/admin/add_location">
-            <select name="campus_name" required>
-                <option value="">-- Select Campus --</option>
-                <option value="Henderson">Henderson</option>
-                <option value="North Las Vegas">North Las Vegas</option>
-                <option value="West Charleston">West Charleston</option>
-            </select>
-            <input type="text" name="room_number" placeholder="Room Number" required>
-            <input type="submit" value="Add Location">
-        </form>
-    </section>
-
-    <!-- Assign Proctors Section -->
-    <section>
-        <h3>Assign Proctors</h3>
-        <form method="POST" action="/admin/assign_proctor">
-            <select name="location_id" id="locationSelect" required>
-                <option value="">-- Select Location --</option>
-                {% for loc in locations %}
-                <option value="{{ loc.id }}">{{ loc.campus_name }} - {{ loc.room_number }}</option>
-                {% endfor %}
-            </select>
-
-            <select name="proctor_id" id="proctorSelect" required>
-                <option value="">-- Select Proctor --</option>
-                {% for user in proctors %}
-                <option value="{{ user.id }}">{{ user.full_name }}</option>
-                {% endfor %}
-            </select>
-
-            <input type="submit" value="Assign Proctor" id="assignButton" disabled>
-        </form>
-
-        <script>
-            const locationSelect = document.getElementById('locationSelect');
-            const proctorSelect = document.getElementById('proctorSelect');
-            const assignButton = document.getElementById('assignButton');
-
-            function updateButtonState() {
-                assignButton.disabled = !(locationSelect.value && proctorSelect.value);
-            }
-
-            locationSelect.addEventListener('change', updateButtonState);
-            proctorSelect.addEventListener('change', updateButtonState);
-        </script>
-    </section>
-
-    <!-- Student Registrations Section -->
-    <section>
-        <h3>Student Registrations</h3>
-        <table>
-            <tr>
-                <th>Student Name</th>
-                <th>Email</th>
-                <th>Registered Exams</th>
-            </tr>
-            {% for entry in student_data %}
-            <tr>
-                <td>{{ entry.student.full_name }}</td>
-                <td>{{ entry.student.email }}</td>
-                <td>
-                    {% if entry.exams %}
-                        <ul>
-                            {% for exam in entry.exams %}
-                            <li>
-                                {{ exam.exam_name }} - {{ exam.campus_name }} - {{ exam.room_number }} - {{ exam.proctor_name or 'No Proctor' }}
-                                <form method="POST" action="/admin/remove_registration" class="inline">
-                                    <input type="hidden" name="user_id" value="{{ entry.student.id }}">
-                                    <input type="hidden" name="exam_session_id" value="{{ exam.session_id }}">
-                                    <input type="submit" value="Remove">
-                                </form>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        No exams scheduled
-                    {% endif %}
-                </td>
-            </tr>
+        <select name="proctor_id" id="proctorSelect" required>
+            <option value="">-- Select Proctor --</option>
+            {% for user in proctors %}
+            <option value="{{ user.id }}">{{ user.full_name }}</option>
             {% endfor %}
-        </table>
-    </section>
+        </select>
+
+        <input type="submit" value="Assign Proctor" id="assignButton" disabled>
+    </form>
+
+    <script>
+        const locationSelect = document.getElementById('locationSelect');
+        const proctorSelect = document.getElementById('proctorSelect');
+        const assignButton = document.getElementById('assignButton');
+
+        function updateButtonState() {
+            assignButton.disabled = !(locationSelect.value && proctorSelect.value);
+        }
+
+        locationSelect.addEventListener('change', updateButtonState);
+        proctorSelect.addEventListener('change', updateButtonState);
+    </script>
+</section>
+
+<!-- Student Registrations Section -->
+<section>
+    <h3>Student Registrations</h3>
+    <table>
+        <tr>
+            <th>Student Name</th>
+            <th>Email</th>
+            <th>Registered Exams</th>
+        </tr>
+        {% for entry in student_data %}
+        <tr>
+            <td>{{ entry.student.full_name }}</td>
+            <td>{{ entry.student.email }}</td>
+            <td>
+                {% if entry.exams %}
+                    <ul>
+                        {% for exam in entry.exams %}
+                        <li>
+                            {{ exam.exam_name }} - {{ exam.campus_name }} - {{ exam.room_number }} - {{ exam.proctor_name or 'No Proctor' }}
+                            <form method="POST" action="/admin_remove_registration" class="inline">
+                                <input type="hidden" name="user_id" value="{{ entry.student.id }}">
+                                <input type="hidden" name="exam_session_id" value="{{ exam.session_id }}">
+                                <input type="submit" value="Remove">
+                            </form>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    No exams scheduled
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</section>
+
 </body>
 </html>
