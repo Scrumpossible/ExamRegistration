@@ -7,25 +7,42 @@
     <link rel="stylesheet" href="{{url_for('static', filename='faculty.css')}}">
 </head>
 <body>
-    <h2>Faculty Dashboard - {{ name }}</h2>
-<table border="1">
-<tr>
-  <th>Exam</th>
-  <th>Date</th>
-  <th>Time</th>
-  <th>Campus</th>
-  <th>Room</th>
-</tr>
-{% for s in sessions %}
-<tr>
-  <td>{{ s.name }}</td>
-  <td>{{ s.session_date }}</td>
-  <td>{{ s.session_time }}</td>
-  <td>{{ s.campus_name }}</td>
-  <td>{{ s.room_number }}</td>
-</tr>
-{% endfor %}
-</table>
+    <h2>Faculty Dashboard – {{ name }}</h2>
+
+    {% if schedule %}
+        {% for date, timeslots in schedule.items() %}
+            <h3>{{ date }}</h3>
+            <table>
+                <tr>
+                    <th>Time</th>
+                    <th>Student</th>
+                    <th>Exam</th>
+                    <th>Campus</th>
+                    <th>Room</th>
+                </tr>
+                {% for time, students in timeslots.items() %}
+                    {% if students %}
+                        {% for s in students %}
+                        <tr>
+                            <td>{{ time }}</td>
+                            <td>{{ s.student_name }}</td>
+                            <td>{{ s.exam_name }}</td>
+                            <td>{{ s.campus_name }}</td>
+                            <td>{{ s.room_number }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td>{{ time }}</td>
+                            <td colspan="4" class="empty">No exams scheduled</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </table>
+        {% endfor %}
+    {% else %}
+        <p style="text-align:center;">No upcoming exams scheduled.</p>
+    {% endif %}
 <a href="/">Logout</a>
 
 </body>
