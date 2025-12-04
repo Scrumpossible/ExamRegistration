@@ -66,10 +66,11 @@ def logout():
 def register():
     error = None
     if request.method == 'POST':
-        name = request.form['name']
+        first_name = request.form['first_name']
+        last_name = request.form['last_name']
         email = request.form['email']
+        nhse_number = request.form['nhse_number']
         password = request.form['password']
-        role = request.form['role']
 
         if role == 'student':
             nshe_number = request.form.get('nhse_number', '')
@@ -359,4 +360,5 @@ def admin_remove_registration():
     return redirect('/admin_home')
 
 if __name__ == '__main__':
+
     app.run(host='localhost', port=5000, debug=True)
