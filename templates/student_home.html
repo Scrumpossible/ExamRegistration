@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <link rel= "stylesheet" href="{{url_for('static', filename = 'student.css')}}">
+    </head>
+     <body>
+      <div class="container">
+        <h1>Student Dashboard - {{ name }}</h1>
+
+        <form action="/exam_register" method="GET">
+            <button type="submit" {% if sessions|length >= 3 %}disabled{% endif %}>Register for Exam</button>
+        </form>
+
+        {% if sessions %}
+        <table>
+            <tr>
+                <th>Exam</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Campus</th>
+                <th>Room</th>
+                <th>Proctor</th>
+                <th>Action</th>
+            </tr>
+            {% for s in sessions %}
+            <tr>
+                <td>{{ s.name }}</td>
+                <td>{{ s.session_date }}</td>
+                <td>{{ s.session_time }}</td>
+                <td>{{ s.campus_name }}</td>
+                <td>{{ s.room_number }}</td>
+                <td>{{ s.proctor_name or "TBD" }}</td>
+                <td>
+                    <form action="/remove_registration" method="POST">
+                        <input type="hidden" name="session_id" value="{{ s.session_id }}">
+                        <button type="submit" class="cancel-btn button-class">Cancel</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p style="margin-top: 30px; color: #555;">You are not registered for any exams yet.</p>
+        {% endif %}
+
+    </div>
+        <a href="/">Logout</a>
+     </body>
+</html>
