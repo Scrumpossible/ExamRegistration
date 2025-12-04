@@ -114,37 +114,44 @@ def logout():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    error = None
-    if request.method == 'POST':
-        name = request.form['name']
+   if request.method == 'POST':
+        first_name = request.form['first_name']
+        last_name = request.form ['last_name']
         email = request.form['email']
+        nhse_number = request.form['nhse_number']
         password = request.form['password']
-        role = request.form['role']
 
-        if role == 'student':
-            nshe_number = request.form.get('nhse_number', '')
-        else:
-            nshe_number = request.form.get('employee_number', '')
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
 
-        db = get_db_connection()
-        cursor = db.cursor()
-        cursor.execute("SELECT id FROM users WHERE email=%s", (email,))
-        if cursor.fetchone():
-            error = "Email already registered!"
-        else:
-            cursor.execute(
-                "INSERT INTO users (full_name, email, nshe_num, role, password) VALUES (%s,%s,%s,%s,%s)",
-                (name, email, nshe_number, role, password)
-            )
-            db.commit()
-            cursor.close()
-            db.close()
-            return redirect('/login')
+            # Check if email already exists
+            cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+            existing_user = cursor.fetchone()
 
-        cursor.close()
-        db.close()
+            if existing_user:
+                message = "Email already registered!"
+            else:
+                # Insert new user
+                cursor.execute(
+                    "INSERT INTO users (first_name, last_name, email, nhse_number, password) VALUES (%s, %s, %s, %s, %s)",
+                    (first_name, last_name, email, nhse_number, password)
+                )
+                conn.commit()
 
-    return render_template('register.html', error=error)
+                # ✅ Flash message and redirect to success page
+                flash("Registration successful!")
+                return redirect(url_for('/success'))
+
+        except mysql.connector.Error as err:
+            message = f"Database error: {err}"
+
+        finally:
+            if conn.is_connected():
+                cursor.close()
+                conn.close()
+
+    return render_template('register.html')
 
 # ---------- Student Home ----------
 @app.route('/student_home')
@@ -413,4 +420,5 @@ def admin_remove_registration():
     return redirect('/admin_home')
 
 if __name__ == '__main__':
+
     app.run(host='localhost', port=5000, debug=True)
