@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel= "stylesheet" href="{{url_for('static', filename = 'register.css')}}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
 </head>
 <body>
     <div class="page-wrapper">
@@ -18,10 +18,10 @@
                 </select><br><br>
 
                 <label>First Name:</label><br>
-                <input type="text" name="full_name" required><br>
+                <input type="text" name="first_name" required><br>
 
                 <label>Last Name:</label><br>
-                <input type="text" name="full_name" required><br>
+                <input type="text" name="last_name" required><br>
 
                 <label>Email:</label><br>
                 <input type="email" name="email" required><br>
@@ -29,7 +29,7 @@
 
                 <div id="studentField">
                 <label>NSHE Number:</label><br>
-                <input type="password" name="nshe_num"><br>
+                <input type="text" name="nshe_num"><br>
                 </div>
 
                 <div id="facultyField" style="display:none;">
