@@ -1,51 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <link rel= "stylesheet" href="{{url_for('static', filename = 'student.css')}}">
-    </head>
-     <body>
-      <div class="container">
-        <h1>Student Dashboard - {{ name }}</h1>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+      <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
 
-        <form action="/exam_register" method="GET">
-            <button type="submit" {% if sessions|length >= 3 %}disabled{% endif %}>Register for Exam</button>
+        h1, h2, h3 {
+            text-align: center;
+        }
+
+        header {
+            width: 100%;
+            background-color: #007bff;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        header a.logout {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        /* Responsive two-column layout for welcome + registrations */
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 20px auto;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .container > section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            flex: 1 1 360px;
+            min-width: 300px;
+        }
+
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin-bottom: 20px; 
+        }
+
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 8px; 
+            text-align: left; 
+        }
+
+        th { 
+            background-color: #f2f2f2; 
+        }
+
+        .button-class {
+            padding: 8px 14px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .button-class:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .cancel-btn {
+            padding: 6px 10px;
+            background-color: #c0392b;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .muted { color: #666; }
+      </style>
+</head>
+<body>
+    <header>
+        <h1>{{ name }} - Student Home</h1>
+        <a href="{{ url_for('logout') }}" class="logout">Logout</a>
+    </header>
+
+<main class="container">
+    <section class="welcome">
+        <!-- your existing welcome section content -->
+        <h2>Unregistered Exams</h2>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash">{{ messages[0] }}</div>
+            {% endif %}
+        {% endwith %}
+        <p>Use the button below to register for available exam sessions.</p>
+        <form action="/exam_register" method="GET" style="display:inline-block; margin-top:10px;">
+            <button type="submit" class="button-class" {% if sessions|length >= 3 %}disabled{% endif %}>
+                Register for Exam
+            </button>
         </form>
+    </section>
 
-        {% if sessions %}
-        <table>
-            <tr>
-                <th>Exam</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Campus</th>
-                <th>Room</th>
-                <th>Proctor</th>
-                <th>Action</th>
-            </tr>
-            {% for s in sessions %}
-            <tr>
-                <td>{{ s.name }}</td>
-                <td>{{ s.session_date }}</td>
-                <td>{{ s.session_time }}</td>
-                <td>{{ s.campus_name }}</td>
-                <td>{{ s.room_number }}</td>
-                <td>{{ s.proctor_name or "TBD" }}</td>
-                <td>
-                    <form action="/remove_registration" method="POST">
-                        <input type="hidden" name="session_id" value="{{ s.session_id }}">
-                        <button type="submit" class="cancel-btn button-class">Cancel</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
+    <section class="registrations">
+        <!-- your existing registrations table -->
+        <h3>Registered Exams</h3>
+        {% if sessions and sessions|length > 0 %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Exam</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Campus</th>
+                        <th>Room</th>
+                        <th>Proctor</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in sessions %}
+                    <tr>
+                        <td>{{ s.name }}</td>
+                        <td>{{ s.session_date }}</td>
+                        <td>{{ s.session_time }}</td>
+                        <td>{{ s.campus_name }}</td>
+                        <td>{{ s.room_number }}</td>
+                        <td>{{ s.proctor_name or 'TBD' }}</td>
+                        <td>
+                            <form action="/remove_registration" method="POST">
+                                <input type="hidden" name="session_id" value="{{ s.session_id }}">
+                                <button type="submit" class="cancel-btn">Cancel</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         {% else %}
-        <p style="margin-top: 30px; color: #555;">You are not registered for any exams yet.</p>
+            <p class="muted">You are not registered for any exams yet.</p>
         {% endif %}
+    </section>
+</main>
 
-    </div>
-        <a href="/">Logout</a>
-     </body>
+    <!-- footer removed per request -->
+</body>
 </html>
