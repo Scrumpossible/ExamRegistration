@@ -135,26 +135,38 @@ def register():
             existing_user = cursor.fetchone()
 
             if existing_user:
-                flash("Email already registered!", "error")
-                return redirect('/register')
+                error_msg = "Email already registered!"
+                cursor.close()
+                conn.close()
+                return render_template('register.html', error=error_msg)
 
             # Insert new user
             cursor.execute("""
                 INSERT INTO users 
-                    (first_name, last_name, email, nshe_num, employee_number, role, password)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (first_name, last_name, email, nshe_num, employee_number, role, password))
+                    (first_name, last_name, email, nshe_num, role, password)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (first_name, last_name, email, nshe_num, role, password))
 
             conn.commit()
             return render_template('register_success.html')
 
         except mysql.connector.Error as err:
-            flash(f"Database error: {err}", "error")
-
+            error_msg = f"Database error: {err}"
+            try:
+                if cursor:
+                    cursor.close()
+                if conn and conn.is_connected():
+                    conn.close()
+            except Exception:
+                pass
+            return render_template('register.html', error=error_msg)
         finally:
-            if conn.is_connected():
-                cursor.close()
-                conn.close()
+            try:
+                if conn and conn.is_connected():
+                    cursor.close()
+                    conn.close()
+            except Exception:
+                pass
 
     return render_template('register.html')
 
