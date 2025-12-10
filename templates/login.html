@@ -3,13 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel= "stylesheet" href="{{url_for('static', filename = 'login.css')}}">
+    <title>{% block title %}Exam Registration{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
 </head>
 <body>
-    <!-- Admin link in upper right -->
-    <div class ="admin-link">
-        <a href="/admin">Admin Entrance</a>
-    </div>
 
     <div class="main-box">
         <h1>Welcome</h1>
@@ -17,39 +14,32 @@
 
     <div class="login-container">
 
-     <div class="login-box">
-        <h2>Student Login</h2>
+        <div class="login-box">
+            <h2>Login</h2>
 
-        {% if error %}
-        <p style="color:red;">{{ error }}</p>
-        {% endif %}
+            {% if error %}
+            <p style="color:red;">{{ error }}</p>
+            {% endif %}
 
-        <form method="POST" action="/">
-            <label for="email">Email</label>
-            <input type="text" id="email" name="email" placeholder="example@student.csn.edu" required />
-
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="Password" required />
-
-            <button type="submit" class="button-class">Login</button>
-        </form>
-     </div>
-
-     <div class="login-box h2">
-        <h2>Faculty Login</h2>
-        <form method="POST" action="/">
+            <form method="POST" action="/login">
                 <label for="email">Email</label>
-                <input type="text" id="email" name="email" placeholder="example@csn.edu" required />
-        
+                <input type="text" id="email" name="email" placeholder="Email" required />
+
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" placeholder="Password" required />
 
                 <button type="submit" class="button-class">Login</button>
-        </form>
-     </div>
+            </form>
+
+            <!-- New registration link -->
+            <p style="margin-top: 10px; text-align: center;">
+                Don't have an account? <a href="/register">Register here</a>
+            </p>
+        </div>
     </div>
-     <div class="user-button">
-       <p>Don't have an account?</p> <a href="/register">New User?</a>
-    </div>
+
 </body>
 </html>
+
+
+

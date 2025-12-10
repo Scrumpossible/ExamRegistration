@@ -1,12 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <link rel= "stylesheet" href="{{url_for('static', filename = 'student.css')}}">
-    </head>
-     <body>
-      <div class="container">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Logout button in top-right */
+        .logout {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        button, .button-class {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        button:disabled, .button-class:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .cancel-btn {
+            background-color: #f44336;
+        }
+
+        .register-btn {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="{{ url_for('logout') }}" class="logout">Logout</a>
+
+    <div class="container">
         <h1>Student Dashboard - {{ name }}</h1>
 
         <form action="/exam_register" method="GET">
@@ -46,6 +116,6 @@
         {% endif %}
 
     </div>
-        <a href="/">Logout</a>
-     </body>
+
+</body>
 </html>
