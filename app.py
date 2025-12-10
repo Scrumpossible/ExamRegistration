@@ -31,14 +31,14 @@ def faculty_home():
 
     cursor.execute("""
         SELECT s.session_date, s.session_time, e.name AS exam_name,
-               l.campus_name, l.room_number, u.full_name AS student_name
+               l.campus_name, l.room_number, CONCAT(u.first_name, ' ', u.last_name) AS student_name
         FROM exam_sessions s
         JOIN registrations r ON r.session_id = s.id
         JOIN users u ON r.user_id = u.id
         JOIN exams e ON s.exam_id = e.id
         JOIN locations l ON s.location_id = l.id
         WHERE s.session_date >= %s
-        ORDER BY s.session_date, s.session_time, u.full_name
+        ORDER BY s.session_date, s.session_time, u.first_name, u.last_name
     """, (today,))
 
     results = cursor.fetchall()
@@ -94,7 +94,7 @@ def login():
         if user:
             session['user_id'] = user['id']
             session['role'] = user['role']
-            session['name'] = user['full_name']
+            session['name'] = f"{user['first_name']} {user['last_name']}"
             if user['role'] == 'student':
                 return redirect('/student_home')
             elif user['role'] == 'faculty':
@@ -114,11 +114,16 @@ def logout():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    print("DEBUG: Registration POST received")
+    print("Form data:", request.form)
+
     if request.method == 'POST':
+        role = request.form['role']
         first_name = request.form['first_name']
-        last_name = request.form ['last_name']
+        last_name = request.form['last_name']
         email = request.form['email']
-        nhse_number = request.form['nhse_number']
+        nshe_num = request.form.get('nshe_num')
+        employee_number = request.form.get('employee_number')
         password = request.form['password']
 
         try:
@@ -130,21 +135,22 @@ def register():
             existing_user = cursor.fetchone()
 
             if existing_user:
-                message = "Email already registered!"
-            else:
-                # Insert new user
-                cursor.execute(
-                    "INSERT INTO users (first_name, last_name, email, nhse_number, password) VALUES (%s, %s, %s, %s, %s)",
-                    (first_name, last_name, email, nhse_number, password)
-                )
-                conn.commit()
+                flash("Email already registered!", "error")
+                return redirect('/register')
 
-                # ✅ Flash message and redirect to success page
-                flash("Registration successful!")
-                return redirect(url_for('/success'))
+            # Insert new user
+            cursor.execute("""
+                INSERT INTO users 
+                    (first_name, last_name, email, nshe_num, employee_number, role, password)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (first_name, last_name, email, nshe_num, employee_number, role, password))
+
+            conn.commit()
+            flash("Registration successful!")
+            return redirect('/login')
 
         except mysql.connector.Error as err:
-            message = f"Database error: {err}"
+            flash(f"Database error: {err}", "error")
 
         finally:
             if conn.is_connected():
@@ -166,12 +172,12 @@ def student_home():
     cursor = db.cursor(dictionary=True)
     cursor.execute("""
         SELECT s.id AS session_id,
-               e.name,
-               s.session_date,
-               s.session_time,
-               l.campus_name,
-               l.room_number,
-               u.full_name AS proctor_name
+            e.name,
+            s.session_date,
+            s.session_time,
+            l.campus_name,
+            l.room_number,
+            CONCAT(u.first_name, ' ', u.last_name) AS proctor_name
         FROM registrations r
         JOIN exam_sessions s ON r.session_id = s.id
         JOIN exams e ON s.exam_id = e.id
@@ -180,6 +186,7 @@ def student_home():
         WHERE r.user_id=%s
         ORDER BY s.session_date, s.session_time
     """, (student_id,))
+
     sessions = cursor.fetchall()
     cursor.close()
     db.close()
@@ -305,7 +312,11 @@ def admin_home():
     student_data = []
     for student in students:
         cursor.execute("""
-            SELECT s.id AS session_id, e.name AS exam_name, l.campus_name, l.room_number, u.full_name AS proctor_name
+            SELECT s.id AS session_id,
+                e.name AS exam_name,
+                l.campus_name,
+                l.room_number,
+                CONCAT(u.first_name, ' ', u.last_name) AS proctor_name
             FROM registrations r
             JOIN exam_sessions s ON r.session_id = s.id
             JOIN exams e ON s.exam_id = e.id
@@ -313,6 +324,7 @@ def admin_home():
             LEFT JOIN users u ON s.proctor_id = u.id
             WHERE r.user_id=%s
         """, (student['id'],))
+        
         exams_for_student = cursor.fetchall() or []
         student_data.append({'student': student, 'exams': exams_for_student})
 
