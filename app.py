@@ -146,8 +146,7 @@ def register():
             """, (first_name, last_name, email, nshe_num, employee_number, role, password))
 
             conn.commit()
-            flash("Registration successful!")
-            return redirect('/login')
+            return render_template('register_success.html')
 
         except mysql.connector.Error as err:
             flash(f"Database error: {err}", "error")
@@ -270,8 +269,7 @@ def exam_register():
         db.commit()
         cursor.close()
         db.close()
-        flash("Exam registered successfully!")
-        return redirect('/student_home')
+        return render_template('exam_register_success.html')
 
     # GET request: fetch exams and locations
     cursor.execute("SELECT * FROM exams")
