@@ -1,77 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Account – Exam Registration</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: #f9f9f9;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account – Exam Registration</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background-color: #f9f9f9;
+    }
 
-        header {
-            width: 100%;
-            background-color: #004080;
-            color: white;
-            padding: 15px 0;
-            text-align: center;
-        }
+    header {
+        width: 100%;
+        background-color: #004080;
+        color: white;
+        padding: 15px 0;
+        text-align: center;
+    }
 
-        section {
-            width: 90%;
-            max-width: 500px;
-            background-color: white;
-            padding: 30px;
-            margin: 30px 0;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
+    section {
+        width: 90%;
+        max-width: 500px;
+        background-color: white;
+        padding: 30px;
+        margin: 30px 0;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
 
-        h2 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+    h2 { text-align: center; margin-bottom: 20px; }
 
-        label {
-            font-weight: bold;
-        }
+    label { font-weight: bold; }
 
-        input[type="text"], input[type="email"], input[type="password"], select {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0 15px 0;
-            box-sizing: border-box;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
+    input[type="text"], input[type="email"], input[type="password"], select {
+        width: 100%;
+        padding: 8px;
+        margin: 5px 0 15px 0;
+        box-sizing: border-box;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
 
-        button[type="submit"] {
-            width: 100%;
-            padding: 10px;
-            background-color: #004080;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-        }
+    input.valid { border-color: green; }
+    input.invalid { border-color: red; }
 
-        button[type="submit"]:hover {
-            background-color: #0066cc;
-        }
+    button[type="submit"] {
+        width: 100%;
+        padding: 10px;
+        background-color: #004080;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        cursor: pointer;
+    }
 
-        p.error {
-            color: red;
-            text-align: center;
-        }
-    </style>
+    button[type="submit"]:hover { background-color: #0066cc; }
+
+    p.error { color: red; text-align: center; }
+    p.match-status { text-align: right; margin-top: -12px; margin-bottom: 15px; font-size: 0.9em; }
+    p.match-status.match { color: green; }
+    p.match-status.nomatch { color: red; }
+</style>
 </head>
 <body>
 
@@ -113,7 +109,12 @@
         </div>
 
         <label>Password:</label>
-        <input type="password" name="password" required>
+        <input type="password" name="password" id="password" required>
+
+        <label>Confirm Password:</label>
+        <input type="password" name="confirm_password" id="confirmPassword" 
+            required
+            oninput="this.setCustomValidity(this.value !== password.value ? 'Passwords do not match.' : '')">
 
         <button type="submit">Register</button>
     </form>
@@ -129,6 +130,42 @@ function toggleIDField() {
     document.getElementById('studentField').style.display = role === 'student' ? 'block' : 'none';
     document.getElementById('facultyField').style.display = role === 'faculty' ? 'block' : 'none';
 }
+
+// Password confirmation
+const passwordInput = document.getElementById('password');
+const confirmInput = document.getElementById('confirmPassword');
+const matchStatus = document.getElementById('matchStatus');
+const form = document.getElementById('registerForm');
+
+function checkPasswordMatch() {
+    if (!confirmInput.value) {
+        matchStatus.textContent = '';
+        confirmInput.classList.remove('valid', 'invalid');
+        return;
+    }
+    if (passwordInput.value === confirmInput.value) {
+        matchStatus.textContent = 'Passwords match';
+        matchStatus.className = 'match-status match';
+        confirmInput.classList.add('valid');
+        confirmInput.classList.remove('invalid');
+    } else {
+        matchStatus.textContent = 'Passwords do not match';
+        matchStatus.className = 'match-status nomatch';
+        confirmInput.classList.add('invalid');
+        confirmInput.classList.remove('valid');
+    }
+}
+
+confirmInput.addEventListener('input', checkPasswordMatch);
+passwordInput.addEventListener('input', checkPasswordMatch);
+
+// Prevent form submission if passwords do not match
+form.addEventListener('submit', function(e){
+    if (passwordInput.value !== confirmInput.value) {
+        e.preventDefault();
+        alert('Passwords do not match. Please fix before submitting.');
+    }
+});
 </script>
 
 </body>
