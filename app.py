@@ -212,87 +212,70 @@ def exam_register():
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
 
-    # --- POST: student submitted registration ---
     if request.method == 'POST':
-        session_id = request.form['session_id']
-
-        # Check student's current registration count
-        cursor.execute("SELECT COUNT(*) AS count FROM registrations WHERE user_id=%s", (student_id,))
-        count = cursor.fetchone()['count']
-        if count >= 3:
-            cursor.close()
-            db.close()
-            flash("You have already registered for 3 exams.")
-            return redirect('/student_home')
-
-        # Check if session is full
-        cursor.execute("SELECT COUNT(*) AS count FROM registrations WHERE session_id=%s", (session_id,))
-        reg_count = cursor.fetchone()['count']
-        if reg_count >= 20:
-            cursor.close()
-            db.close()
-            flash("That session is full.")
+        session_str = request.form.get('session_id')
+        if not session_str:
+            flash("Please select exam, location, date, and time.")
             return redirect('/exam_register')
 
-        # Insert registration
-        cursor.execute("INSERT INTO registrations (user_id, session_id) VALUES (%s, %s)", (student_id, session_id))
+        try:
+            # Split pseudo session_id from hidden input
+            exam_id, location_id, session_date, session_time = session_str.split("_")
+            exam_id = int(exam_id)
+            location_id = int(location_id)
+            session_date_obj = datetime.strptime(session_date, "%Y-%m-%d").date()
+            session_time_obj = datetime.strptime(session_time, "%H:%M").time()
+        except Exception:
+            flash("Invalid session selection.")
+            return redirect('/exam_register')
+
+        # Check if session exists
+        cursor.execute("""
+            SELECT id FROM exam_sessions
+            WHERE exam_id=%s AND location_id=%s AND session_date=%s AND session_time=%s
+        """, (exam_id, location_id, session_date_obj, session_time_obj))
+        row = cursor.fetchone()
+
+        if row:
+            session_id = row['id']
+        else:
+            # Create session if not exists
+            cursor.execute("""
+                INSERT INTO exam_sessions (exam_id, location_id, proctor_id, session_date, session_time)
+                VALUES (%s, %s, NULL, %s, %s)
+            """, (exam_id, location_id, session_date_obj, session_time_obj))
+            db.commit()
+            session_id = cursor.lastrowid
+
+        # Check if student already has 3 exams
+        cursor.execute("SELECT COUNT(*) AS count FROM registrations WHERE user_id=%s", (student_id,))
+        if cursor.fetchone()['count'] >= 3:
+            flash("You have already registered for 3 exams.")
+            cursor.close()
+            db.close()
+            return redirect('/student_home')
+
+        # Register student (only user_id and session_id)
+        cursor.execute("""
+            INSERT INTO registrations (user_id, session_id)
+            VALUES (%s, %s)
+        """, (student_id, session_id))
         db.commit()
         cursor.close()
         db.close()
         flash("Exam registered successfully!")
         return redirect('/student_home')
 
-    # --- GET: show registration form ---
+    # GET request: fetch exams and locations
     cursor.execute("SELECT * FROM exams")
     exams = cursor.fetchall()
 
     cursor.execute("SELECT * FROM locations")
     locations = cursor.fetchall()
-
-    today = date.today()
-    now = datetime.now().time()
-
-    cursor.execute("""
-        SELECT s.id, s.exam_id, s.location_id, s.session_date, s.session_time,
-               l.campus_name, l.room_number,
-               u.full_name AS proctor_name,
-               (SELECT COUNT(*) FROM registrations r WHERE r.session_id = s.id) AS reg_count
-        FROM exam_sessions s
-        JOIN locations l ON s.location_id = l.id
-        LEFT JOIN users u ON s.proctor_id = u.id
-        WHERE s.session_date >= %s
-        ORDER BY s.session_date, s.session_time
-    """, (today,))
-    sessions = cursor.fetchall()
-
-    available_sessions = []
-    for s in sessions:
-        # Convert string date/time to Python types if necessary
-        if isinstance(s['session_date'], str):
-            s['session_date'] = datetime.strptime(s['session_date'], "%Y-%m-%d").date()
-        if isinstance(s['session_time'], timedelta):
-            s['session_time'] = (datetime.min + s['session_time']).time()
-        elif isinstance(s['session_time'], str):
-            s['session_time'] = datetime.strptime(s['session_time'], "%H:%M:%S").time()
-
-        # Skip full sessions or past times today
-        if s['reg_count'] >= 20:
-            continue
-        if s['session_date'] == today and s['session_time'] <= now:
-            continue
-
-        s['session_date'] = s['session_date'].strftime("%Y-%m-%d")
-        s['session_time'] = s['session_time'].strftime("%I:%M %p").lstrip('0')
-        available_sessions.append(s)
-
     cursor.close()
     db.close()
 
-    return render_template(
-        'student_exam_register.html',
-        exams=exams,
-        locations=locations,
-        sessions=available_sessions)
+    return render_template('student_exam_register.html', exams=exams, locations=locations)
 
 # ---------- Admin Home ----------
 @app.route('/admin_home')

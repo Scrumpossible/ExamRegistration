@@ -35,102 +35,109 @@
     </select>
 
     <label for="locationSelect">Location:</label>
-    <select id="locationSelect" required disabled>
+    <select id="locationSelect" name="location_id" required disabled>
         <option value="">-- Select Location --</option>
+        {% for loc in locations %}
+        <option value="{{ loc.id }}">{{ loc.campus_name }} - Room {{ loc.room_number }}</option>
+        {% endfor %}
     </select>
 
     <label for="dateSelect">Date:</label>
-    <input type="date" id="dateSelect" required disabled>
+    <input type="date" id="dateSelect" name="date" required disabled>
 
     <label for="timeSelect">Time:</label>
-    <select id="timeSelect" required disabled>
+    <select id="timeSelect" name="time" required disabled>
         <option value="">-- Select Time --</option>
     </select>
 
+    <!-- Hidden input to send pseudo session id to backend -->
     <input type="hidden" name="session_id" id="sessionIdInput">
+
     <input type="submit" value="Register" id="registerButton" disabled>
     <button type="button" onclick="window.location.href='/student_home'">Cancel</button>
 </form>
 
 <script>
-    const sessions = {{ sessions | tojson }};
-    const examSelect = document.getElementById('examSelect');
-    const locationSelect = document.getElementById('locationSelect');
-    const dateSelect = document.getElementById('dateSelect');
-    const timeSelect = document.getElementById('timeSelect');
-    const sessionIdInput = document.getElementById('sessionIdInput');
-    const registerButton = document.getElementById('registerButton');
+const examSelect = document.getElementById('examSelect');
+const locationSelect = document.getElementById('locationSelect');
+const dateSelect = document.getElementById('dateSelect');
+const timeSelect = document.getElementById('timeSelect');
+const sessionIdInput = document.getElementById('sessionIdInput');
+const registerButton = document.getElementById('registerButton');
 
-    let filteredSessions = [];
+// Time slots 8AM-4PM
+const TIME_SLOTS = [];
+for (let hour = 8; hour <= 16; hour++) {
+    const ampm = hour < 12 ? 'AM' : 'PM';
+    const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+    TIME_SLOTS.push(`${displayHour}:00 ${ampm}`);
+}
 
-    examSelect.addEventListener('change', () => {
-        const examId = examSelect.value;
-        locationSelect.innerHTML = '<option value="">-- Select Location --</option>';
-        dateSelect.value = '';
-        timeSelect.innerHTML = '<option value="">-- Select Time --</option>';
-        dateSelect.disabled = true;
+// Enable location select when an exam is chosen
+examSelect.addEventListener('change', () => {
+    locationSelect.disabled = !examSelect.value;
+    dateSelect.value = '';
+    dateSelect.disabled = true;
+    timeSelect.innerHTML = '<option value="">-- Select Time --</option>';
+    timeSelect.disabled = true;
+    registerButton.disabled = true;
+    sessionIdInput.value = '';
+});
+
+// Enable date select when location is chosen
+locationSelect.addEventListener('change', () => {
+    dateSelect.value = '';
+    dateSelect.disabled = !locationSelect.value;
+    timeSelect.innerHTML = '<option value="">-- Select Time --</option>';
+    timeSelect.disabled = true;
+    registerButton.disabled = true;
+    sessionIdInput.value = '';
+
+    if (!locationSelect.value) return;
+
+    const today = new Date();
+    const maxDate = new Date();
+    maxDate.setMonth(today.getMonth() + 3);
+    dateSelect.min = today.toISOString().split('T')[0];
+    dateSelect.max = maxDate.toISOString().split('T')[0];
+});
+
+// Populate times when a date is chosen
+dateSelect.addEventListener('change', () => {
+    timeSelect.innerHTML = '<option value="">-- Select Time --</option>';
+    registerButton.disabled = true;
+    sessionIdInput.value = '';
+
+    if (!dateSelect.value) {
         timeSelect.disabled = true;
+        return;
+    }
+
+    TIME_SLOTS.forEach(slot => {
+        timeSelect.innerHTML += `<option value="${slot}">${slot}</option>`;
+    });
+    timeSelect.disabled = false;
+});
+
+// Enable submit button when time is selected
+timeSelect.addEventListener('change', () => {
+    if (!timeSelect.value) {
         registerButton.disabled = true;
+        sessionIdInput.value = '';
+        return;
+    }
 
-        if (!examId) {
-            locationSelect.disabled = true;
-            return;
-        }
+    // Convert 12-hour to 24-hour format
+    const [hourMin, ampm] = timeSelect.value.split(' ');
+    let [h, m] = hourMin.split(':').map(Number);
+    if (ampm === "PM" && h < 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    const time24 = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
 
-        filteredSessions = sessions.filter(s => s.exam_id == examId);
-        const locationIds = [...new Set(filteredSessions.map(s => s.location_id))];
-
-        locationIds.forEach(locId => {
-            const loc = filteredSessions.find(s => s.location_id == locId);
-            locationSelect.innerHTML += `<option value="${loc.location_id}">${loc.campus_name} - Room ${loc.room_number}</option>`;
-        });
-
-        locationSelect.disabled = false;
-    });
-
-    locationSelect.addEventListener('change', () => {
-        const locId = locationSelect.value;
-        dateSelect.value = '';
-        timeSelect.innerHTML = '<option value="">-- Select Time --</option>';
-        dateSelect.disabled = true;
-        timeSelect.disabled = true;
-        registerButton.disabled = true;
-
-        if (!locId) return;
-
-        const dates = [...new Set(filteredSessions
-            .filter(s => s.location_id == locId)
-            .map(s => s.session_date))];
-
-        dateSelect.min = new Date().toISOString().split('T')[0];
-        dateSelect.disabled = false;
-        dateSelect.dataset.availableDates = JSON.stringify(dates);
-    });
-
-    dateSelect.addEventListener('change', () => {
-        const locId = locationSelect.value;
-        const selectedDate = dateSelect.value;
-        timeSelect.innerHTML = '<option value="">-- Select Time --</option>';
-        timeSelect.disabled = true;
-        registerButton.disabled = true;
-
-        if (!selectedDate || !locId) return;
-
-        const availableTimes = filteredSessions
-            .filter(s => s.location_id == locId && s.session_date == selectedDate)
-            .map(s => ({ time: s.session_time, id: s.id }));
-
-        availableTimes.forEach(t => {
-            timeSelect.innerHTML += `<option value="${t.id}">${t.time}</option>`;
-        });
-
-        if (availableTimes.length > 0) timeSelect.disabled = false;
-    });
-
-    timeSelect.addEventListener('change', () => {
-        sessionIdInput.value = timeSelect.value;
-        registerButton.disabled = !timeSelect.value;
-    });
+    sessionIdInput.value = `${examSelect.value}_${locationSelect.value}_${dateSelect.value}_${time24}`;
+    registerButton.disabled = false;
+});
 </script>
+
 </body>
 </html>
