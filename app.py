@@ -225,7 +225,6 @@ def exam_register():
             return redirect('/exam_register')
 
         try:
-            # Split pseudo session_id from hidden input
             exam_id, location_id, session_date, session_time = session_str.split("_")
             exam_id = int(exam_id)
             location_id = int(location_id)
@@ -235,17 +234,40 @@ def exam_register():
             flash("Invalid session selection.")
             return redirect('/exam_register')
 
+        # --- Check existing registrations ---
+        cursor.execute("""
+            SELECT r.session_id, s.exam_id, s.session_date, s.session_time
+            FROM registrations r
+            JOIN exam_sessions s ON r.session_id = s.id
+            WHERE r.user_id=%s
+        """, (student_id,))
+        existing_regs = cursor.fetchall()
+
+        # Prevent duplicate exam registration
+        for reg in existing_regs:
+            if reg['exam_id'] == exam_id:
+                flash("You are already registered for this exam.")
+                cursor.close()
+                db.close()
+                return redirect('/exam_register')
+
+        # Prevent exam time conflicts
+        for reg in existing_regs:
+            if reg['session_date'] == session_date_obj and reg['session_time'] == session_time_obj:
+                flash("You are already registered for another exam at this time.")
+                cursor.close()
+                db.close()
+                return redirect('/exam_register')
+
         # Check if session exists
         cursor.execute("""
             SELECT id FROM exam_sessions
             WHERE exam_id=%s AND location_id=%s AND session_date=%s AND session_time=%s
         """, (exam_id, location_id, session_date_obj, session_time_obj))
         row = cursor.fetchone()
-
         if row:
             session_id = row['id']
         else:
-            # Create session if not exists
             cursor.execute("""
                 INSERT INTO exam_sessions (exam_id, location_id, proctor_id, session_date, session_time)
                 VALUES (%s, %s, NULL, %s, %s)
@@ -253,7 +275,7 @@ def exam_register():
             db.commit()
             session_id = cursor.lastrowid
 
-        # Check if student already has 3 exams
+        # Limit to 3 exams
         cursor.execute("SELECT COUNT(*) AS count FROM registrations WHERE user_id=%s", (student_id,))
         if cursor.fetchone()['count'] >= 3:
             flash("You have already registered for 3 exams.")
@@ -261,26 +283,49 @@ def exam_register():
             db.close()
             return redirect('/student_home')
 
-        # Register student (only user_id and session_id)
-        cursor.execute("""
-            INSERT INTO registrations (user_id, session_id)
-            VALUES (%s, %s)
-        """, (student_id, session_id))
+        # Insert registration (no exam_id column in registrations)
+        cursor.execute("INSERT INTO registrations (user_id, session_id, registration_date) VALUES (%s,%s,NOW())",
+                       (student_id, session_id))
         db.commit()
         cursor.close()
         db.close()
-        return render_template('exam_register_success.html')
+        flash("Exam registered successfully!")
+        return redirect('/student_home')
 
-    # GET request: fetch exams and locations
+    # --- GET request ---
     cursor.execute("SELECT * FROM exams")
     exams = cursor.fetchall()
 
     cursor.execute("SELECT * FROM locations")
     locations = cursor.fetchall()
+
+    # Fetch existing registrations via session->exam mapping
+    cursor.execute("""
+        SELECT r.session_id, s.exam_id, s.session_date, s.session_time
+        FROM registrations r
+        JOIN exam_sessions s ON r.session_id = s.id
+        WHERE r.user_id=%s
+    """, (student_id,))
+    existing_regs = cursor.fetchall()
+
+    for reg in existing_regs:
+        if isinstance(reg['session_date'], (datetime, date)):
+            reg['session_date'] = reg['session_date'].strftime("%Y-%m-%d")
+        if isinstance(reg['session_time'], time):
+            reg['session_time'] = reg['session_time'].strftime("%H:%M")
+        elif isinstance(reg['session_time'], timedelta):
+            total_seconds = int(reg['session_time'].total_seconds())
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            reg['session_time'] = f"{hours:02d}:{minutes:02d}"
+        
     cursor.close()
     db.close()
 
-    return render_template('student_exam_register.html', exams=exams, locations=locations)
+    return render_template('student_exam_register.html',
+                           exams=exams,
+                           locations=locations,
+                           existing_regs=existing_regs)
 
 # ---------- Admin Home ----------
 @app.route('/admin_home')

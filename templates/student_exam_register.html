@@ -30,7 +30,15 @@
     <select id="examSelect" name="exam_id" required>
         <option value="">-- Select Exam --</option>
         {% for exam in exams %}
-        <option value="{{ exam.id }}">{{ exam.name }}</option>
+            {% set disabled = False %}
+            {% for reg in existing_regs %}
+                {% if reg.exam_id == exam.id %}
+                    {% set disabled = True %}
+                {% endif %}
+            {% endfor %}
+            <option value="{{ exam.id }}" {% if disabled %}disabled{% endif %}>
+                {{ exam.name }} {% if disabled %}(Already registered){% endif %}
+            </option>
         {% endfor %}
     </select>
 
@@ -50,7 +58,6 @@
         <option value="">-- Select Time --</option>
     </select>
 
-    <!-- Hidden input to send pseudo session id to backend -->
     <input type="hidden" name="session_id" id="sessionIdInput">
 
     <input type="submit" value="Register" id="registerButton" disabled>
@@ -65,6 +72,9 @@ const timeSelect = document.getElementById('timeSelect');
 const sessionIdInput = document.getElementById('sessionIdInput');
 const registerButton = document.getElementById('registerButton');
 
+// Existing registrations passed from Flask
+const existingRegs = {{ existing_regs | tojson }};
+
 // Time slots 8AM-4PM
 const TIME_SLOTS = [];
 for (let hour = 8; hour <= 16; hour++) {
@@ -73,7 +83,17 @@ for (let hour = 8; hour <= 16; hour++) {
     TIME_SLOTS.push(`${displayHour}:00 ${ampm}`);
 }
 
-// Enable location select when an exam is chosen
+// Disable exams already registered
+for (const option of examSelect.options) {
+    if (option.value === "") continue;
+    const examId = parseInt(option.value);
+    if (existingRegs.some(r => r.exam_id === examId)) {
+        option.disabled = true;
+        option.text += " (Already registered)";
+    }
+}
+
+// Enable location select when exam is chosen
 examSelect.addEventListener('change', () => {
     locationSelect.disabled = !examSelect.value;
     dateSelect.value = '';
@@ -114,10 +134,27 @@ dateSelect.addEventListener('change', () => {
     }
 
     TIME_SLOTS.forEach(slot => {
-        timeSelect.innerHTML += `<option value="${slot}">${slot}</option>`;
+        // Check if the student already has an exam at this date/time
+        const conflict = existingRegs.some(reg => 
+            reg.session_date === dateSelect.value &&
+            reg.session_time === slot24ToHHMM(slot)
+        );
+
+        timeSelect.innerHTML += `<option value="${slot}" ${conflict ? 'disabled' : ''}>
+            ${slot} ${conflict ? '(Already registered)' : ''}
+        </option>`;
     });
     timeSelect.disabled = false;
 });
+
+// Helper: convert 12h slot to HH:MM for comparison
+function slot24ToHHMM(slot) {
+    let [hourMin, ampm] = slot.split(' ');
+    let [h, m] = hourMin.split(':').map(Number);
+    if (ampm === "PM" && h < 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+}
 
 // Enable submit button when time is selected
 timeSelect.addEventListener('change', () => {
@@ -136,6 +173,15 @@ timeSelect.addEventListener('change', () => {
 
     sessionIdInput.value = `${examSelect.value}_${locationSelect.value}_${dateSelect.value}_${time24}`;
     registerButton.disabled = false;
+});
+
+// Prevent submitting a disabled time slot
+document.getElementById('examRegisterForm').addEventListener('submit', (e) => {
+    const selectedTimeOption = timeSelect.options[timeSelect.selectedIndex];
+    if (selectedTimeOption.disabled) {
+        e.preventDefault();
+        alert("You cannot register for this time slot because you are already registered for another exam at this time.");
+    }
 });
 </script>
 
