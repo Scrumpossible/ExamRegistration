@@ -118,12 +118,19 @@ def register():
     print("Form data:", request.form)
 
     if request.method == 'POST':
+<<<<<<< HEAD
         role = request.form['role']
         first_name = request.form['first_name']
         last_name = request.form['last_name']
         email = request.form['email']
         nshe_num = request.form.get('nshe_num')
         employee_number = request.form.get('employee_number')
+=======
+        first_name = request.form['first_name']
+        last_name = request.form['last_name']
+        email = request.form['email']
+        nhse_number = request.form['nhse_number']
+>>>>>>> remotes/origin/itz_v4
         password = request.form['password']
 
         try:
