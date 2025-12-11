@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, session, url_for, flash
 from datetime import date, datetime, timedelta, time
 import mysql.connector
 
@@ -11,69 +11,67 @@ def get_db_connection():
         user="root",
         password="root",
         database="exam_registration",
-        use_pure=True 
+        use_pure=True
     )
 
+# ---------- Home ----------
 @app.route('/')
 def home():
     return render_template('login.html')
 
-@app.route('/faculty_home')
-def faculty_home():
-    if 'user_id' not in session or session.get('role') != 'faculty':
-        return redirect('/login')
+# ---------- Register ----------
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        role = request.form['role']
+        first_name = request.form['first_name']
+        last_name = request.form['last_name']
+        email = request.form['email']
+        nshe_num = request.form.get('nshe_num')
+        password = request.form['password']
 
-    faculty_name = session.get('name', 'Faculty')
-    today = date.today()
+        if not nshe_num:
+            flash(f"NSHE Number is required for {role}.", "error")
+            return redirect('/register')
 
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+        try:
+            db = get_db_connection()
+            cursor = db.cursor()
 
-    cursor.execute("""
-        SELECT s.session_date, s.session_time, e.name AS exam_name,
-               l.campus_name, l.room_number, CONCAT(u.first_name, ' ', u.last_name) AS student_name
-        FROM exam_sessions s
-        JOIN registrations r ON r.session_id = s.id
-        JOIN users u ON r.user_id = u.id
-        JOIN exams e ON s.exam_id = e.id
-        JOIN locations l ON s.location_id = l.id
-        WHERE s.session_date >= %s
-        ORDER BY s.session_date, s.session_time, u.first_name, u.last_name
-    """, (today,))
+            # Check email
+            cursor.execute("SELECT id FROM users WHERE email=%s", (email,))
+            if cursor.fetchone():
+                flash("Email already registered!", "error")
+                return redirect('/register')
 
-    results = cursor.fetchall()
-    cursor.close()
-    db.close()
+            # Check nshe_num
+            cursor.execute("SELECT id FROM users WHERE nshe_num=%s", (nshe_num,))
+            if cursor.fetchone():
+                flash(f"{role.capitalize()} number already registered!", "error")
+                return redirect('/register')
 
-    # --- Build schedule dictionary safely ---
-    schedule = {}
-    for row in results:
-        session_date = row['session_date']
-        session_time = row['session_time']
+            # Insert
+            cursor.execute(
+                "INSERT INTO users (first_name, last_name, email, password, role, nshe_num) "
+                "VALUES (%s,%s,%s,%s,%s,%s)",
+                (first_name, last_name, email, password, role, nshe_num)
+            )
+            db.commit()
+            return render_template('register_success.html')
 
-        # Handle MySQL TIME fields that may come as timedelta
-        if isinstance(session_time, timedelta):
-            session_time = (datetime.min + session_time).time()
+        except mysql.connector.Error as e:
+            db.rollback()
+            flash(f"Database error: {e}", "error")
+            return redirect('/register')
 
-        if session_date is None or session_time is None:
-            continue  # Skip incomplete rows
+        finally:
+            if db.is_connected():
+                cursor.close()
+                db.close()
 
-        date_str = session_date.strftime("%Y-%m-%d")
-        time_str = session_time.strftime("%I:%M %p")
+    return render_template('register.html')
 
-        # Initialize day structure if missing
-        if date_str not in schedule:
-            schedule[date_str] = {f"{hour:02d}:00 AM" if hour < 12 else f"{hour-12:02d}:00 PM": []
-                                  for hour in range(8, 17)}
-
-        # Append student info to correct time slot
-        if time_str not in schedule[date_str]:
-            schedule[date_str][time_str] = []
-
-        schedule[date_str][time_str].append(row)
-
-    return render_template('faculty_home.html', name=faculty_name, schedule=schedule)
-
+# ---------- Login ----------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
@@ -83,10 +81,7 @@ def login():
 
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute(
-            "SELECT * FROM users WHERE email=%s AND password=%s",
-            (email, password)
-        )
+        cursor.execute("SELECT * FROM users WHERE email=%s AND password=%s", (email, password))
         user = cursor.fetchone()
         cursor.close()
         db.close()
@@ -107,56 +102,11 @@ def login():
 
     return render_template('login.html', error=error)
 
+# ---------- Logout ----------
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect('/login')
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    print("DEBUG: Registration POST received")
-    print("Form data:", request.form)
-
-    if request.method == 'POST':
-        role = request.form['role']
-        first_name = request.form['first_name']
-        last_name = request.form['last_name']
-        email = request.form['email']
-        nshe_num = request.form.get('nshe_num')
-        employee_number = request.form.get('employee_number')
-        password = request.form['password']
-
-        try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-
-            # Check if email already exists
-            cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
-            existing_user = cursor.fetchone()
-
-            if existing_user:
-                flash("Email already registered!", "error")
-                return redirect('/register')
-
-            # Insert new user
-            cursor.execute("""
-                INSERT INTO users 
-                    (first_name, last_name, email, nshe_num, employee_number, role, password)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (first_name, last_name, email, nshe_num, employee_number, role, password))
-
-            conn.commit()
-            return render_template('register_success.html')
-
-        except mysql.connector.Error as err:
-            flash(f"Database error: {err}", "error")
-
-        finally:
-            if conn.is_connected():
-                cursor.close()
-                conn.close()
-
-    return render_template('register.html')
 
 # ---------- Student Home ----------
 @app.route('/student_home')
@@ -171,7 +121,7 @@ def student_home():
     cursor = db.cursor(dictionary=True)
     cursor.execute("""
         SELECT s.id AS session_id,
-            e.name,
+            e.name AS exam_name,
             s.session_date,
             s.session_time,
             l.campus_name,
@@ -181,34 +131,66 @@ def student_home():
         JOIN exam_sessions s ON r.session_id = s.id
         JOIN exams e ON s.exam_id = e.id
         JOIN locations l ON s.location_id = l.id
-        LEFT JOIN users u ON s.proctor_id = u.id
+        LEFT JOIN exam_proctors ep ON ep.location_id = l.id
+        LEFT JOIN users u ON ep.user_id = u.id
         WHERE r.user_id=%s
         ORDER BY s.session_date, s.session_time
     """, (student_id,))
-
     sessions = cursor.fetchall()
     cursor.close()
     db.close()
+
     return render_template('student_home.html', sessions=sessions, name=name)
 
-# ---------- Remove registration ----------
-@app.route('/remove_registration', methods=['POST'])
-def remove_registration():
-    if 'user_id' not in session or session.get('role') != 'student':
+# ---------- Faculty Home ----------
+@app.route('/faculty_home')
+def faculty_home():
+    if 'user_id' not in session or session.get('role') != 'faculty':
         return redirect('/login')
 
-    session_id = request.form['session_id']
-    user_id = session['user_id']
+    faculty_id = session['user_id']
+    faculty_name = session.get('name', 'Faculty')
+    today = date.today()
 
     db = get_db_connection()
-    cursor = db.cursor()
-    cursor.execute("DELETE FROM registrations WHERE user_id=%s AND session_id=%s", (user_id, session_id))
-    db.commit()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT s.id AS session_id,
+            s.session_date,
+            s.session_time,
+            e.name AS exam_name,
+            l.campus_name,
+            l.room_number,
+            CONCAT(u.first_name, ' ', u.last_name) AS student_name
+        FROM exam_sessions s
+        LEFT JOIN registrations r ON r.session_id = s.id
+        LEFT JOIN users u ON r.user_id = u.id
+        JOIN exams e ON s.exam_id = e.id
+        JOIN locations l ON s.location_id = l.id
+        WHERE s.session_date >= %s
+        ORDER BY s.session_date, s.session_time
+    """, (today,))
+    results = cursor.fetchall()
     cursor.close()
     db.close()
-    return redirect('/student_home')
 
-# ---------- Exam Registration Page ----------
+    schedule = {}
+    for row in results:
+        date_str = row['session_date'].strftime("%Y-%m-%d") if row['session_date'] else "N/A"
+        time_val = row['session_time']
+        if isinstance(time_val, timedelta):
+            time_val = (datetime.min + time_val).time()
+        time_str = time_val.strftime("%H:%M") if time_val else "N/A"
+
+        if date_str not in schedule:
+            schedule[date_str] = {}
+        if time_str not in schedule[date_str]:
+            schedule[date_str][time_str] = []
+        schedule[date_str][time_str].append(row)
+
+    return render_template('faculty_home.html', name=faculty_name, schedule=schedule)
+
+# ---------- Exam Registration ----------
 @app.route('/exam_register', methods=['GET', 'POST'])
 def exam_register():
     if 'user_id' not in session or session.get('role') != 'student':
@@ -221,7 +203,7 @@ def exam_register():
     if request.method == 'POST':
         session_str = request.form.get('session_id')
         if not session_str:
-            flash("Please select exam, location, date, and time.")
+            flash("Please select exam session.")
             return redirect('/exam_register')
 
         try:
@@ -234,32 +216,36 @@ def exam_register():
             flash("Invalid session selection.")
             return redirect('/exam_register')
 
-        # --- Check existing registrations ---
+        # Check existing registrations
         cursor.execute("""
-            SELECT r.session_id, s.exam_id, s.session_date, s.session_time
+            SELECT s.exam_id, s.session_date, s.session_time
             FROM registrations r
             JOIN exam_sessions s ON r.session_id = s.id
             WHERE r.user_id=%s
         """, (student_id,))
         existing_regs = cursor.fetchall()
 
-        # Prevent duplicate exam registration
         for reg in existing_regs:
             if reg['exam_id'] == exam_id:
-                flash("You are already registered for this exam.")
+                flash("Already registered for this exam.")
                 cursor.close()
                 db.close()
                 return redirect('/exam_register')
-
-        # Prevent exam time conflicts
-        for reg in existing_regs:
             if reg['session_date'] == session_date_obj and reg['session_time'] == session_time_obj:
-                flash("You are already registered for another exam at this time.")
+                flash("Time conflict with another exam.")
                 cursor.close()
                 db.close()
                 return redirect('/exam_register')
 
-        # Check if session exists
+        # Limit 3 exams
+        cursor.execute("SELECT COUNT(*) AS count FROM registrations WHERE user_id=%s", (student_id,))
+        if cursor.fetchone()['count'] >= 3:
+            flash("Already registered for 3 exams.")
+            cursor.close()
+            db.close()
+            return redirect('/student_home')
+
+        # Create session if not exists
         cursor.execute("""
             SELECT id FROM exam_sessions
             WHERE exam_id=%s AND location_id=%s AND session_date=%s AND session_time=%s
@@ -268,64 +254,70 @@ def exam_register():
         if row:
             session_id = row['id']
         else:
+            # session created without a proctor
             cursor.execute("""
-                INSERT INTO exam_sessions (exam_id, location_id, proctor_id, session_date, session_time)
-                VALUES (%s, %s, NULL, %s, %s)
+                INSERT INTO exam_sessions (exam_id, location_id, session_date, session_time)
+                VALUES (%s,%s,%s,%s)
             """, (exam_id, location_id, session_date_obj, session_time_obj))
             db.commit()
             session_id = cursor.lastrowid
 
-        # Limit to 3 exams
-        cursor.execute("SELECT COUNT(*) AS count FROM registrations WHERE user_id=%s", (student_id,))
-        if cursor.fetchone()['count'] >= 3:
-            flash("You have already registered for 3 exams.")
-            cursor.close()
-            db.close()
-            return redirect('/student_home')
-
-        # Insert registration (no exam_id column in registrations)
-        cursor.execute("INSERT INTO registrations (user_id, session_id, registration_date) VALUES (%s,%s,NOW())",
-                       (student_id, session_id))
+        cursor.execute("INSERT INTO registrations (user_id, session_id, exam_id, registration_date) VALUES (%s,%s,%s,NOW())",
+                       (student_id, session_id, exam_id))
         db.commit()
         cursor.close()
         db.close()
         flash("Exam registered successfully!")
         return redirect('/student_home')
 
-    # --- GET request ---
+    # GET request
     cursor.execute("SELECT * FROM exams")
     exams = cursor.fetchall()
 
     cursor.execute("SELECT * FROM locations")
     locations = cursor.fetchall()
 
-    # Fetch existing registrations via session->exam mapping
+    # Fetch student's existing registrations
     cursor.execute("""
-        SELECT r.session_id, s.exam_id, s.session_date, s.session_time
+        SELECT s.exam_id, s.session_date, s.session_time
         FROM registrations r
         JOIN exam_sessions s ON r.session_id = s.id
-        WHERE r.user_id=%s
+        WHERE r.user_id = %s
     """, (student_id,))
     existing_regs = cursor.fetchall()
 
+    # Convert times to strings for JSON serialization
     for reg in existing_regs:
-        if isinstance(reg['session_date'], (datetime, date)):
-            reg['session_date'] = reg['session_date'].strftime("%Y-%m-%d")
-        if isinstance(reg['session_time'], time):
+        if isinstance(reg['session_time'], (time, timedelta)):
+            if isinstance(reg['session_time'], timedelta):
+                reg['session_time'] = (datetime.min + reg['session_time']).time()
             reg['session_time'] = reg['session_time'].strftime("%H:%M")
-        elif isinstance(reg['session_time'], timedelta):
-            total_seconds = int(reg['session_time'].total_seconds())
-            hours = total_seconds // 3600
-            minutes = (total_seconds % 3600) // 60
-            reg['session_time'] = f"{hours:02d}:{minutes:02d}"
-        
+
     cursor.close()
     db.close()
 
-    return render_template('student_exam_register.html',
-                           exams=exams,
-                           locations=locations,
-                           existing_regs=existing_regs)
+    return render_template('student_exam_register.html', exams=exams, locations=locations, existing_regs=existing_regs)
+
+# ---------- Remove Student Registration ----------
+@app.route('/remove_registration', methods=['POST'])
+def remove_registration():
+    if 'user_id' not in session or session.get('role') != 'student':
+        return redirect('/login')
+
+    student_id = session['user_id']
+    session_id = request.form.get('session_id')
+    if not session_id:
+        flash("No session selected to remove.")
+        return redirect('/student_home')
+
+    db = get_db_connection()
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM registrations WHERE user_id=%s AND session_id=%s", (student_id, session_id))
+    db.commit()
+    cursor.close()
+    db.close()
+    flash("Registration removed successfully!")
+    return redirect('/student_home')
 
 # ---------- Admin Home ----------
 @app.route('/admin_home')
@@ -344,7 +336,7 @@ def admin_home():
     cursor.execute("SELECT * FROM locations")
     locations = cursor.fetchall()
 
-    # Proctors
+    # Faculty (proctors)
     cursor.execute("SELECT * FROM users WHERE role='faculty'")
     proctors = cursor.fetchall()
 
@@ -356,27 +348,26 @@ def admin_home():
     for student in students:
         cursor.execute("""
             SELECT s.id AS session_id,
-                e.name AS exam_name,
-                l.campus_name,
-                l.room_number,
-                CONCAT(u.first_name, ' ', u.last_name) AS proctor_name
+                   e.name AS exam_name,
+                   l.campus_name,
+                   l.room_number,
+                   CONCAT(u.first_name, ' ', u.last_name) AS proctor_name
             FROM registrations r
             JOIN exam_sessions s ON r.session_id = s.id
             JOIN exams e ON s.exam_id = e.id
             JOIN locations l ON s.location_id = l.id
-            LEFT JOIN users u ON s.proctor_id = u.id
+            LEFT JOIN exam_proctors ep ON ep.location_id = l.id
+            LEFT JOIN users u ON ep.user_id = u.id
             WHERE r.user_id=%s
         """, (student['id'],))
-        
         exams_for_student = cursor.fetchall() or []
         student_data.append({'student': student, 'exams': exams_for_student})
 
     cursor.close()
     db.close()
-    return render_template('admin_home.html', exams=exams, locations=locations,
-                           proctors=proctors, student_data=student_data)
+    return render_template('admin_home.html', exams=exams, locations=locations, proctors=proctors, student_data=student_data)
 
-# ---------- Add/Remove exams, locations, assign proctor, remove registration ----------
+# ---------- Add/Delete Exams ----------
 @app.route('/admin/add_exam', methods=['POST'])
 def add_exam():
     if not session.get('admin_logged_in'):
@@ -385,7 +376,7 @@ def add_exam():
     description = request.form['description']
     db = get_db_connection()
     cursor = db.cursor()
-    cursor.execute("INSERT INTO exams (name, descriptions) VALUES (%s,%s)", (name, description))
+    cursor.execute("INSERT INTO exams (name, description) VALUES (%s,%s)", (name, description))
     db.commit()
     cursor.close()
     db.close()
@@ -403,6 +394,7 @@ def delete_exam(exam_id):
     db.close()
     return redirect('/admin_home')
 
+# ---------- Add/Delete Locations ----------
 @app.route('/admin/add_location', methods=['POST'])
 def add_location():
     if not session.get('admin_logged_in'):
@@ -429,20 +421,33 @@ def delete_location(location_id):
     db.close()
     return redirect('/admin_home')
 
+# ---------- Assign Proctor ----------
 @app.route('/admin/assign_proctor', methods=['POST'])
 def assign_proctor():
     if not session.get('admin_logged_in'):
         return redirect('/login')
-    location_id = request.form['location_id']
-    proctor_id = request.form['proctor_id']
+
+    location_id = int(request.form['location_id'])
+    proctor_id = int(request.form['proctor_id'])
+
     db = get_db_connection()
     cursor = db.cursor()
-    cursor.execute("UPDATE exam_sessions SET proctor_id=%s WHERE location_id=%s", (proctor_id, location_id))
+
+    # Check if a proctor already exists for this location
+    cursor.execute("SELECT id FROM exam_proctors WHERE location_id=%s", (location_id,))
+    row = cursor.fetchone()
+
+    if row:
+        cursor.execute("UPDATE exam_proctors SET user_id=%s WHERE id=%s", (proctor_id, row[0]))
+    else:
+        cursor.execute("INSERT INTO exam_proctors (location_id, user_id) VALUES (%s, %s)", (location_id, proctor_id))
+
     db.commit()
     cursor.close()
     db.close()
     return redirect('/admin_home')
 
+# ---------- Remove Admin Registration ----------
 @app.route('/admin/remove_registration', methods=['POST'])
 def admin_remove_registration():
     if not session.get('admin_logged_in'):
@@ -457,6 +462,6 @@ def admin_remove_registration():
     db.close()
     return redirect('/admin_home')
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     app.run(host='localhost', port=5000, debug=True)

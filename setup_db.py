@@ -1,129 +1,137 @@
-"""
-setup_db.py
-Initializes the MySQL database for the Flask Exam Registration app, including exam sessions.
+-- =====================================
+-- Drop existing database (start fresh)
+-- =====================================
+DROP DATABASE IF EXISTS exam_registration;
 
-Run this ONCE before running app.py on a new computer:
-    python setup_db.py
-"""
+-- =====================================
+-- Create database and use it
+-- =====================================
+CREATE DATABASE exam_registration;
+USE exam_registration;
 
-import mysql.connector
-from datetime import date, timedelta, time
+-- =====================================
+-- Users table
+-- =====================================
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    nshe_num VARCHAR(10) UNIQUE NOT NULL,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    role ENUM('student', 'faculty', 'admin') NOT NULL,
+    password VARCHAR(255) NOT NULL
+);
 
-# Database connection settings — adjust if needed
-DB_NAME = "exam_registration"
-DB_USER = "root"
-DB_PASSWORD = "root"
-DB_HOST = "localhost"
+-- =====================================
+-- Locations table
+-- =====================================
+CREATE TABLE locations (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    campus_name ENUM('Henderson', 'North Las Vegas', 'West Charleston') NOT NULL,
+    room_number VARCHAR(50) NOT NULL,
+    UNIQUE (campus_name, room_number)
+);
 
-# --- Connect to MySQL server (no database yet) ---
-conn = mysql.connector.connect(
-    host=DB_HOST,
-    user=DB_USER,
-    password=DB_PASSWORD
-)
-cursor = conn.cursor()
+-- =====================================
+-- Exams table
+-- =====================================
+CREATE TABLE exams (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    description TEXT
+);
 
-# --- Create database if not exists ---
-cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_NAME}")
-cursor.execute(f"USE {DB_NAME}")
-
-# --- Create all tables if not exist ---
-TABLES = {}
-
-TABLES["users"] = """
-CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    full_name VARCHAR(100),
-    email VARCHAR(100) UNIQUE,
-    password VARCHAR(100),
-    role ENUM('admin','faculty','student') NOT NULL
-)
-"""
-
-TABLES["exams"] = """
-CREATE TABLE IF NOT EXISTS exams (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    descriptions TEXT
-)
-"""
-
-TABLES["locations"] = """
-CREATE TABLE IF NOT EXISTS locations (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    campus_name VARCHAR(100),
-    room_number VARCHAR(50)
-)
-"""
-
-TABLES["exam_sessions"] = """
-CREATE TABLE IF NOT EXISTS exam_sessions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    exam_id INT,
-    location_id INT,
-    session_date DATE,
-    session_time TIME,
-    proctor_id INT NULL,
+-- =====================================
+-- Exam Proctors table
+-- =====================================
+CREATE TABLE exam_proctors (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    exam_id INT NOT NULL,
+    user_id INT NOT NULL,
+    location_id INT NOT NULL,
     FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE,
-    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE,
-    FOREIGN KEY (proctor_id) REFERENCES users(id) ON DELETE SET NULL
-)
-"""
-
-TABLES["registrations"] = """
-CREATE TABLE IF NOT EXISTS registrations (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT,
-    session_id INT,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (session_id) REFERENCES exam_sessions(id) ON DELETE CASCADE
-)
-"""
+    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE,
+    UNIQUE (exam_id, user_id)
+);
 
-for name, ddl in TABLES.items():
-    print(f"Creating table `{name}`...")
-    cursor.execute(ddl)
+-- =====================================
+-- Exam Sessions table
+-- =====================================
+CREATE TABLE exam_sessions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    location_id INT NOT NULL,
+    proctor_id INT NOT NULL,
+    session_date DATE NOT NULL,
+    session_time TIME NOT NULL,
+    capacity INT NOT NULL DEFAULT 20,
+    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE,
+    FOREIGN KEY (proctor_id) REFERENCES exam_proctors(id) ON DELETE CASCADE
+);
 
-# --- Insert a default admin user if not present ---
-cursor.execute("SELECT COUNT(*) FROM users WHERE role='admin'")
-(admin_exists,) = cursor.fetchone()
-if admin_exists == 0:
-    cursor.execute("""
-        INSERT INTO users (full_name, email, password, role)
-        VALUES ('Administrator', 'admin@example.com', 'admin', 'admin')
-    """)
-    print("Default admin user created: email='admin@example.com', password='admin'")
-else:
-    print("Admin user already exists.")
+-- =====================================
+-- Registrations table
+-- =====================================
+CREATE TABLE registrations (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    session_id INT NOT NULL,
+    exam_id INT NOT NULL,
+    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES exam_sessions(id) ON DELETE CASCADE,
+    FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE,
+    UNIQUE (user_id, exam_id, session_id)
+);
 
-# --- Populate exam sessions for all exams and locations ---
-cursor.execute("SELECT id FROM exams")
-exams = cursor.fetchall()
-cursor.execute("SELECT id FROM locations")
-locations = cursor.fetchall()
+-- =====================================
+-- Insert sample locations
+-- =====================================
+INSERT INTO locations (campus_name, room_number) VALUES
+('Henderson', '101'),
+('North Las Vegas', '202'),
+('West Charleston', '303');
 
-# Configurable date range for exam sessions
-start_date = date.today()
-end_date = start_date + timedelta(days=14)  # 2 weeks of sessions
+-- =====================================
+-- Insert sample exams
+-- =====================================
+INSERT INTO exams (name, description) VALUES
+('Math 101', 'Basic Mathematics'),
+('Physics 101', 'Intro to Physics'),
+('Chemistry 101', 'Basic Chemistry');
 
-time_slots = [time(hour=h) for h in range(8, 17)]  # 8:00 - 16:00 (inclusive)
+-- =====================================
+-- Insert sample users
+-- =====================================
+-- Students
+INSERT INTO users (email, nshe_num, first_name, last_name, role, password) VALUES
+('student1@example.com', '1001', 'Alice', 'Smith', 'student', 'password'),
+('student2@example.com', '1002', 'Bob', 'Johnson', 'student', 'password');
 
-for exam in exams:
-    exam_id = exam[0]
-    for loc in locations:
-        loc_id = loc[0]
-        current_date = start_date
-        while current_date <= end_date:
-            for t in time_slots:
-                cursor.execute("""
-                    INSERT INTO exam_sessions (exam_id, location_id, session_date, session_time)
-                    VALUES (%s, %s, %s, %s)
-                """, (exam_id, loc_id, current_date, t))
-            current_date += timedelta(days=1)
+-- Faculty
+INSERT INTO users (email, nshe_num, first_name, last_name, role, password) VALUES
+('faculty1@example.com', '2001', 'Dr', 'Brown', 'faculty', 'password'),
+('faculty2@example.com', '2002', 'Prof', 'Green', 'faculty', 'password');
 
-conn.commit()
-cursor.close()
-conn.close()
+-- =====================================
+-- Assign faculty as exam proctors
+-- =====================================
+INSERT INTO exam_proctors (exam_id, user_id, location_id) VALUES
+(1, 3, 1),
+(2, 4, 2),
+(3, 3, 3);
 
-print("\nDatabase setup complete. Exam sessions created for all exams and locations.")
-print("You can now run `python app.py`.")
+-- =====================================
+-- Create exam sessions
+-- =====================================
+INSERT INTO exam_sessions (location_id, proctor_id, session_date, session_time) VALUES
+(1, 1, '2025-12-15', '09:00:00'),
+(2, 2, '2025-12-16', '10:00:00'),
+(3, 3, '2025-12-17', '11:00:00');
+
+-- =====================================
+-- Example registrations (optional)
+-- =====================================
+INSERT INTO registrations (user_id, session_id, exam_id) VALUES
+(1, 1, 1),
+(2, 2, 2);

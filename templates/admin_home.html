@@ -100,7 +100,6 @@
         input[type="submit"]:hover:not(:disabled) {
             background-color: #0066cc;
         }
-
     </style>
 </head>
 <body>
@@ -122,7 +121,7 @@
         {% for exam in exams %}
         <tr>
             <td>{{ exam.name }}</td>
-            <td>{{ exam.descriptions }}</td>
+            <td>{{ exam.description }}</td>
             <td><a href="/admin/delete_exam/{{ exam.id }}">Delete</a></td>
         </tr>
         {% endfor %}
@@ -179,7 +178,7 @@
         <select name="proctor_id" id="proctorSelect" required>
             <option value="">-- Select Proctor --</option>
             {% for user in proctors %}
-            <option value="{{ user.id }}">{{ user.full_name }}</option>
+            <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }}</option>
             {% endfor %}
         </select>
 
@@ -218,7 +217,7 @@
                     <ul>
                         {% for exam in entry.exams %}
                         <li>
-                            {{ exam.exam_name }} - {{ exam.campus_name }} - {{ exam.room_number }} - {{ exam.proctor_name or 'No Proctor' }}
+                            {{ exam.name }} - {{ exam.campus_name }} - {{ exam.room_number }} - {{ exam.proctor_name or 'No Proctor' }}
                             <form method="POST" action="/admin/remove_registration" class="inline">
                                 <input type="hidden" name="user_id" value="{{ entry.student.id }}">
                                 <input type="hidden" name="exam_session_id" value="{{ exam.session_id }}">

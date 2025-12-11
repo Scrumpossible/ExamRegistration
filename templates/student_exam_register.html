@@ -30,12 +30,7 @@
     <select id="examSelect" name="exam_id" required>
         <option value="">-- Select Exam --</option>
         {% for exam in exams %}
-            {% set disabled = False %}
-            {% for reg in existing_regs %}
-                {% if reg.exam_id == exam.id %}
-                    {% set disabled = True %}
-                {% endif %}
-            {% endfor %}
+            {% set disabled = existing_regs | selectattr('exam_id', 'equalto', exam.id) | list %}
             <option value="{{ exam.id }}" {% if disabled %}disabled{% endif %}>
                 {{ exam.name }} {% if disabled %}(Already registered){% endif %}
             </option>
@@ -46,7 +41,7 @@
     <select id="locationSelect" name="location_id" required disabled>
         <option value="">-- Select Location --</option>
         {% for loc in locations %}
-        <option value="{{ loc.id }}">{{ loc.campus_name }} - Room {{ loc.room_number }}</option>
+            <option value="{{ loc.id }}">{{ loc.campus_name }} - Room {{ loc.room_number }}</option>
         {% endfor %}
     </select>
 
@@ -81,16 +76,6 @@ for (let hour = 8; hour <= 16; hour++) {
     const ampm = hour < 12 ? 'AM' : 'PM';
     const displayHour = hour % 12 === 0 ? 12 : hour % 12;
     TIME_SLOTS.push(`${displayHour}:00 ${ampm}`);
-}
-
-// Disable exams already registered
-for (const option of examSelect.options) {
-    if (option.value === "") continue;
-    const examId = parseInt(option.value);
-    if (existingRegs.some(r => r.exam_id === examId)) {
-        option.disabled = true;
-        option.text += " (Already registered)";
-    }
 }
 
 // Enable location select when exam is chosen
@@ -134,12 +119,10 @@ dateSelect.addEventListener('change', () => {
     }
 
     TIME_SLOTS.forEach(slot => {
-        // Check if the student already has an exam at this date/time
         const conflict = existingRegs.some(reg => 
             reg.session_date === dateSelect.value &&
             reg.session_time === slot24ToHHMM(slot)
         );
-
         timeSelect.innerHTML += `<option value="${slot}" ${conflict ? 'disabled' : ''}>
             ${slot} ${conflict ? '(Already registered)' : ''}
         </option>`;
@@ -147,7 +130,7 @@ dateSelect.addEventListener('change', () => {
     timeSelect.disabled = false;
 });
 
-// Helper: convert 12h slot to HH:MM for comparison
+// Convert 12h slot to HH:MM
 function slot24ToHHMM(slot) {
     let [hourMin, ampm] = slot.split(' ');
     let [h, m] = hourMin.split(':').map(Number);
@@ -156,15 +139,13 @@ function slot24ToHHMM(slot) {
     return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
 }
 
-// Enable submit button when time is selected
+// Enable submit button
 timeSelect.addEventListener('change', () => {
     if (!timeSelect.value) {
         registerButton.disabled = true;
         sessionIdInput.value = '';
         return;
     }
-
-    // Convert 12-hour to 24-hour format
     const [hourMin, ampm] = timeSelect.value.split(' ');
     let [h, m] = hourMin.split(':').map(Number);
     if (ampm === "PM" && h < 12) h += 12;

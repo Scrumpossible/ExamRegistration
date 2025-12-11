@@ -78,13 +78,19 @@
 <section>
     <h2>Create Account</h2>
 
-    {% if error %}
-    <p class="error">{{ error }}</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <ul>
+        {% for category, message in messages %}
+            <li class="{{ category }}">{{ message }}</li>
+        {% endfor %}
+        </ul>
     {% endif %}
-
-    <form action="/register" method="POST">
+    {% endwith %}
+    
+    <form action="/register" method="POST" id="registerForm">
         <label>Role:</label>
-        <select name="role" id="roleSelect" onchange="toggleIDField()">
+        <select name="role" id="roleSelect" required>
             <option value="student">Student</option>
             <option value="faculty">Faculty</option>
         </select>
@@ -98,23 +104,15 @@
         <label>Email:</label>
         <input type="email" name="email" required>
 
-        <div id="studentField">
-            <label>NSHE Number:</label>
-            <input type="text" name="nshe_num">
-        </div>
-
-        <div id="facultyField" style="display:none;">
-            <label>Employee Number:</label>
-            <input type="text" name="employee_number">
-        </div>
+        <label>NSHE Number:</label>
+        <input type="text" name="nshe_num" required>
 
         <label>Password:</label>
         <input type="password" name="password" id="password" required>
 
         <label>Confirm Password:</label>
-        <input type="password" name="confirm_password" id="confirmPassword" 
-            required
-            oninput="this.setCustomValidity(this.value !== password.value ? 'Passwords do not match.' : '')">
+        <input type="password" name="confirm_password" id="confirmPassword" required>
+        <p id="matchStatus" class="match-status"></p>
 
         <button type="submit">Register</button>
     </form>
@@ -125,13 +123,6 @@
 </section>
 
 <script>
-function toggleIDField() {
-    const role = document.getElementById('roleSelect').value;
-    document.getElementById('studentField').style.display = role === 'student' ? 'block' : 'none';
-    document.getElementById('facultyField').style.display = role === 'faculty' ? 'block' : 'none';
-}
-
-// Password confirmation
 const passwordInput = document.getElementById('password');
 const confirmInput = document.getElementById('confirmPassword');
 const matchStatus = document.getElementById('matchStatus');
@@ -159,7 +150,6 @@ function checkPasswordMatch() {
 confirmInput.addEventListener('input', checkPasswordMatch);
 passwordInput.addEventListener('input', checkPasswordMatch);
 
-// Prevent form submission if passwords do not match
 form.addEventListener('submit', function(e){
     if (passwordInput.value !== confirmInput.value) {
         e.preventDefault();
